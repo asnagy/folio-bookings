@@ -1,0 +1,167 @@
+{
+  "id": "mod-bookings-@version@",
+  "name": "Bookings Storage Module",
+  "provides": [
+    {
+      "id": "bookings-storage",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/bookings-storage/bookings",
+          "permissionsRequired": ["bookings-storage.bookings.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/bookings-storage/bookings",
+          "permissionsRequired": ["bookings-storage.bookings.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/bookings-storage/bookings/{bookingId}",
+          "permissionsRequired": ["bookings-storage.bookings.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/bookings-storage/bookings/{bookingId}",
+          "permissionsRequired": ["bookings-storage.bookings.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/bookings-storage/bookings/{bookingId}",
+          "permissionsRequired": ["bookings-storage.bookings.item.delete"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/bookings-storage/booking-items",
+          "permissionsRequired": ["bookings-storage.booking-items.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/bookings-storage/booking-items",
+          "permissionsRequired": ["bookings-storage.booking-items.item.post"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/bookings-storage/booking-items/{bookingItemId}",
+          "permissionsRequired": ["bookings-storage.booking-items.item.delete"]
+        }
+      ]
+    },
+    {
+      "id": "_tenant",
+      "version": "2.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/_/tenant"
+        },
+        {
+          "methods": ["GET", "DELETE"],
+          "pathPattern": "/_/tenant/{id}"
+        }
+      ]
+    }
+  ],
+  "requires": [],
+  "permissionSets": [
+    {
+      "permissionName": "bookings-storage.bookings.collection.get",
+      "displayName": "Bookings storage - get bookings collection",
+      "description": "Get a collection of booking records"
+    },
+    {
+      "permissionName": "bookings-storage.bookings.item.get",
+      "displayName": "Bookings storage - get individual booking",
+      "description": "Get an individual booking record"
+    },
+    {
+      "permissionName": "bookings-storage.bookings.item.post",
+      "displayName": "Bookings storage - create booking",
+      "description": "Create a new booking record"
+    },
+    {
+      "permissionName": "bookings-storage.bookings.item.put",
+      "displayName": "Bookings storage - modify booking",
+      "description": "Modify a booking record"
+    },
+    {
+      "permissionName": "bookings-storage.bookings.item.delete",
+      "displayName": "Bookings storage - delete booking",
+      "description": "Delete a booking record"
+    },
+    {
+      "permissionName": "bookings-storage.booking-items.collection.get",
+      "displayName": "Bookings storage - get booking items collection",
+      "description": "Get a collection of booking-item associations"
+    },
+    {
+      "permissionName": "bookings-storage.booking-items.item.post",
+      "displayName": "Bookings storage - create booking item association",
+      "description": "Create a booking-item association"
+    },
+    {
+      "permissionName": "bookings-storage.booking-items.item.delete",
+      "displayName": "Bookings storage - delete booking item association",
+      "description": "Delete a booking-item association"
+    },
+    {
+      "permissionName": "bookings-storage.bookings.all",
+      "displayName": "Bookings storage - all booking permissions",
+      "description": "All permissions for booking records",
+      "subPermissions": [
+        "bookings-storage.bookings.collection.get",
+        "bookings-storage.bookings.item.get",
+        "bookings-storage.bookings.item.post",
+        "bookings-storage.bookings.item.put",
+        "bookings-storage.bookings.item.delete",
+        "bookings-storage.booking-items.collection.get",
+        "bookings-storage.booking-items.item.post",
+        "bookings-storage.booking-items.item.delete"
+      ]
+    }
+  ],
+  "launchDescriptor": {
+    "dockerImage": "folioorg/mod-bookings:@version@",
+    "dockerPull": false,
+    "dockerArgs": {
+      "HostConfig": {
+        "PortBindings": { "8081/tcp": [{ "HostPort": "%p" }] },
+        "Memory": 536870912
+      }
+    },
+    "env": [
+      {
+        "name": "JAVA_OPTIONS",
+        "value": "-XX:MaxRAMPercentage=66.0",
+        "description": "JVM options"
+      },
+      {
+        "name": "DB_HOST",
+        "value": "postgres",
+        "description": "Postgres hostname"
+      },
+      {
+        "name": "DB_PORT",
+        "value": "5432",
+        "description": "Postgres port"
+      },
+      {
+        "name": "DB_USERNAME",
+        "value": "folio_admin",
+        "description": "Postgres username"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "value": "folio_admin",
+        "description": "Postgres password"
+      },
+      {
+        "name": "DB_DATABASE",
+        "value": "okapi_modules",
+        "description": "Postgres database name"
+      }
+    ]
+  }
+}

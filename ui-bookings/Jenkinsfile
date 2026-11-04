@@ -1,0 +1,11 @@
+// Jenkinsfile for ui-bookings
+// FOLIO standard Jenkins Pipeline for Stripes UI modules
+
+buildNPM {
+  publishModDescriptor = true
+  runLint = true
+  runTest = true
+  runTestOptions = '--ci --coverage'
+  // Remove this line once the module is ready to publish to npm-folio:
+  // npmDeploy = 'no'
+}

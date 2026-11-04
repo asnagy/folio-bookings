@@ -1,0 +1,405 @@
+openapi: 3.0.0
+info:
+  title: Bookings Storage API
+  description: API for managing booking records in FOLIO
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: /bookings-storage
+
+paths:
+  /bookings:
+    get:
+      operationId: getBookings
+      summary: Get a list of bookings
+      description: Returns a list of booking records, supports CQL queries
+      parameters:
+        - $ref: '#/components/parameters/trait_queryable_query'
+        - $ref: '#/components/parameters/trait_pageable_offset'
+        - $ref: '#/components/parameters/trait_pageable_limit'
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: createBooking
+      summary: Create a new booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /bookings/{bookingId}:
+    get:
+      operationId: getBookingById
+      summary: Get a booking by ID
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '200':
+          description: Booking record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      operationId: updateBooking
+      summary: Update a booking
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        '204':
+          description: Booking updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: deleteBooking
+      summary: Delete a booking
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '204':
+          description: Booking deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /booking-items:
+    get:
+      operationId: getBookingItems
+      summary: Get booking-item associations
+      parameters:
+        - $ref: '#/components/parameters/trait_queryable_query'
+        - $ref: '#/components/parameters/trait_pageable_offset'
+        - $ref: '#/components/parameters/trait_pageable_limit'
+      responses:
+        '200':
+          description: List of booking-item associations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingItemCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: createBookingItem
+      summary: Associate an item with a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingItem'
+      responses:
+        '201':
+          description: Booking-item association created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /booking-items/{bookingItemId}:
+    delete:
+      operationId: deleteBookingItem
+      summary: Remove an item from a booking
+      parameters:
+        - name: bookingItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Association removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    bookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    trait_queryable_query:
+      name: query
+      in: query
+      description: CQL query string
+      schema:
+        type: string
+    trait_pageable_offset:
+      name: offset
+      in: query
+      description: Skip over a number of elements
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    trait_pageable_limit:
+      name: limit
+      in: query
+      description: Limit the number of elements returned
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 500
+        default: 10
+
+  schemas:
+    Booking:
+      type: object
+      description: A booking record representing a reservation of one or more items for a patron
+      required:
+        - userId
+        - startDate
+        - endDate
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the booking
+        userId:
+          type: string
+          format: uuid
+          description: UUID of the FOLIO user this booking is assigned to
+        startDate:
+          type: string
+          format: date-time
+          description: Start date and time of the booking; checkout will be performed at this time
+        endDate:
+          type: string
+          format: date-time
+          description: End date and time of the booking
+        status:
+          type: string
+          description: Current status of the booking
+          enum:
+            - PENDING
+            - RECALL_REQUIRED
+            - RECALL_TRIGGERED
+            - CONFIRMED
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+          default: PENDING
+        notes:
+          type: string
+          description: Optional staff notes for the booking
+          maxLength: 2000
+        pickupServicePointId:
+          type: string
+          format: uuid
+          description: UUID of the service point where items will be checked out
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    BookingCollection:
+      type: object
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        totalRecords:
+          type: integer
+
+    BookingItem:
+      type: object
+      description: Association between a booking and an inventory item
+      required:
+        - bookingId
+        - itemId
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookingId:
+          type: string
+          format: uuid
+          description: UUID of the associated booking
+        itemId:
+          type: string
+          format: uuid
+          description: UUID of the inventory item being booked
+        instanceId:
+          type: string
+          format: uuid
+          description: UUID of the instance (for display purposes)
+        holdingsRecordId:
+          type: string
+          format: uuid
+          description: UUID of the holdings record
+        itemBarcode:
+          type: string
+          description: Barcode of the item (denormalized for display)
+        itemTitle:
+          type: string
+          description: Title of the item (denormalized for display)
+        callNumber:
+          type: string
+          description: Call number of the item (denormalized for display)
+        recallStatus:
+          type: string
+          description: Recall status for this specific item
+          enum:
+            - NOT_REQUIRED
+            - REQUIRED
+            - TRIGGERED
+            - RETURNED
+          default: NOT_REQUIRED
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    BookingItemCollection:
+      type: object
+      properties:
+        bookingItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingItem'
+        totalRecords:
+          type: integer
+
+    Metadata:
+      type: object
+      description: System-generated audit information
+      readOnly: true
+      properties:
+        createdDate:
+          type: string
+          format: date-time
+        createdByUserId:
+          type: string
+          format: uuid
+        updatedDate:
+          type: string
+          format: date-time
+        updatedByUserId:
+          type: string
+          format: uuid
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        parameters:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+
+    Errors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        total_records:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    Unauthorized:
+      description: Unauthorized
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'

@@ -1,0 +1,22 @@
+name: api-lint
+
+on:
+  push:
+    paths:
+      - 'src/main/resources/swagger.api/**'
+      - 'descriptors/ModuleDescriptor-template.json'
+  pull_request:
+    paths:
+      - 'src/main/resources/swagger.api/**'
+      - 'descriptors/ModuleDescriptor-template.json'
+
+jobs:
+  api-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run api-lint
+        uses: folio-org/folio-tools/.github/actions/api-lint@master
+        with:
+          api_types: OAS
+          api_directories: src/main/resources/swagger.api

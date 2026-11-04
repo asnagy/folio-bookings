@@ -1,0 +1,72 @@
+databaseChangeLog:
+  - changeSet:
+      id: v1.0.0-create-booking-items-table
+      author: folio-bookings
+      comment: Create the booking_items table
+      changes:
+        - createTable:
+            tableName: booking_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_booking_items_booking
+                    references: bookings(id)
+              - column:
+                  name: item_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: instance_id
+                  type: uuid
+              - column:
+                  name: holdings_record_id
+                  type: uuid
+              - column:
+                  name: item_barcode
+                  type: varchar(128)
+              - column:
+                  name: item_title
+                  type: varchar(512)
+              - column:
+                  name: call_number
+                  type: varchar(256)
+              - column:
+                  name: recall_status
+                  type: varchar(32)
+                  defaultValue: NOT_REQUIRED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_date
+                  type: timestamptz
+              - column:
+                  name: created_by_user_id
+                  type: uuid
+              - column:
+                  name: updated_date
+                  type: timestamptz
+              - column:
+                  name: updated_by_user_id
+                  type: uuid
+        - createIndex:
+            indexName: idx_booking_items_booking_id
+            tableName: booking_items
+            columns:
+              - column:
+                  name: booking_id
+        - createIndex:
+            indexName: idx_booking_items_item_id
+            tableName: booking_items
+            columns:
+              - column:
+                  name: item_id

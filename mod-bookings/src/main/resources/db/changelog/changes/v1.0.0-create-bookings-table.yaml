@@ -1,0 +1,72 @@
+databaseChangeLog:
+  - changeSet:
+      id: v1.0.0-create-bookings-table
+      author: folio-bookings
+      comment: Create the bookings table
+      changes:
+        - createTable:
+            tableName: bookings
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: varchar(2000)
+              - column:
+                  name: pickup_service_point_id
+                  type: uuid
+              - column:
+                  name: created_date
+                  type: timestamptz
+              - column:
+                  name: created_by_user_id
+                  type: uuid
+              - column:
+                  name: updated_date
+                  type: timestamptz
+              - column:
+                  name: updated_by_user_id
+                  type: uuid
+        - createIndex:
+            indexName: idx_bookings_user_id
+            tableName: bookings
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_bookings_status
+            tableName: bookings
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_bookings_start_date
+            tableName: bookings
+            columns:
+              - column:
+                  name: start_date

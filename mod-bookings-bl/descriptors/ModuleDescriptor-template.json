@@ -1,0 +1,183 @@
+{
+  "id": "mod-bookings-bl-@version@",
+  "name": "Bookings Business Logic Module",
+  "provides": [
+    {
+      "id": "bookings",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/bookings/bookings",
+          "permissionsRequired": ["bookings.bookings.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/bookings/bookings",
+          "permissionsRequired": ["bookings.bookings.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/bookings/bookings/{bookingId}",
+          "permissionsRequired": ["bookings.bookings.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/bookings/bookings/{bookingId}",
+          "permissionsRequired": ["bookings.bookings.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/bookings/bookings/{bookingId}",
+          "permissionsRequired": ["bookings.bookings.item.delete"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/bookings/bookings/{bookingId}/activate",
+          "permissionsRequired": ["bookings.bookings.item.activate"],
+          "permissionsDesired": ["bookings.override-availability"]
+        }
+      ]
+    },
+    {
+      "id": "_tenant",
+      "version": "2.0",
+      "interfaceType": "system",
+      "handlers": [
+        { "methods": ["POST"], "pathPattern": "/_/tenant" },
+        { "methods": ["GET", "DELETE"], "pathPattern": "/_/tenant/{id}" }
+      ]
+    },
+    {
+      "id": "_timer",
+      "version": "1.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/bookings/scheduled/checkout",
+          "unit": "minute",
+          "delay": "5",
+          "permissionsRequired": []
+        }
+      ]
+    }
+  ],
+  "requires": [
+    { "id": "bookings-storage", "version": "1.0" },
+    { "id": "circulation",      "version": "9.0 10.0 11.0 12.0 13.0 14.0" },
+    { "id": "inventory",        "version": "10.0 11.0 12.0 13.0" },
+    { "id": "users",            "version": "16.1" },
+    { "id": "loan-storage",     "version": "7.0" }
+  ],
+  "permissionSets": [
+    {
+      "permissionName": "bookings.bookings.collection.get",
+      "displayName": "Bookings - get booking collection",
+      "description": "Get a list of bookings"
+    },
+    {
+      "permissionName": "bookings.bookings.item.get",
+      "displayName": "Bookings - view a booking",
+      "description": "View an individual booking record"
+    },
+    {
+      "permissionName": "bookings.bookings.item.post",
+      "displayName": "Bookings - create booking",
+      "description": "Create a new booking record"
+    },
+    {
+      "permissionName": "bookings.bookings.item.put",
+      "displayName": "Bookings - edit booking",
+      "description": "Edit an existing booking record"
+    },
+    {
+      "permissionName": "bookings.bookings.item.delete",
+      "displayName": "Bookings - delete booking",
+      "description": "Delete a booking record"
+    },
+    {
+      "permissionName": "bookings.bookings.item.activate",
+      "displayName": "Bookings - manually activate a booking",
+      "description": "Manually trigger checkout for all items in a booking"
+    },
+    {
+      "permissionName": "bookings.override-availability",
+      "displayName": "Bookings - override item availability",
+      "description": "Create a booking for an item regardless of its current loan status"
+    },
+    {
+      "permissionName": "bookings.bookings.view",
+      "displayName": "Bookings: View bookings",
+      "description": "View-only access to booking records",
+      "subPermissions": [
+        "bookings.bookings.collection.get",
+        "bookings.bookings.item.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.bookings.create-edit",
+      "displayName": "Bookings: Create and edit bookings",
+      "description": "Create and edit booking records, including recall triggering",
+      "subPermissions": [
+        "bookings.bookings.view",
+        "bookings.bookings.item.post",
+        "bookings.bookings.item.put",
+        "bookings.bookings.item.activate"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.bookings.delete",
+      "displayName": "Bookings: Delete bookings",
+      "description": "Delete booking records",
+      "subPermissions": [
+        "bookings.bookings.item.delete"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.bookings.override-availability",
+      "displayName": "Bookings: Override item availability",
+      "description": "Allow booking of items regardless of current loan status",
+      "subPermissions": [
+        "bookings.override-availability"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.all",
+      "displayName": "Bookings: All permissions",
+      "description": "All permissions for the Bookings module",
+      "subPermissions": [
+        "bookings.bookings.create-edit",
+        "bookings.bookings.delete",
+        "bookings.bookings.override-availability"
+      ],
+      "visible": true
+    }
+  ],
+  "launchDescriptor": {
+    "dockerImage": "folioorg/mod-bookings-bl:@version@",
+    "dockerPull": false,
+    "dockerArgs": {
+      "HostConfig": {
+        "PortBindings": { "8082/tcp": [{ "HostPort": "%p" }] },
+        "Memory": 536870912
+      }
+    },
+    "env": [
+      {
+        "name": "JAVA_OPTIONS",
+        "value": "-XX:MaxRAMPercentage=66.0",
+        "description": "JVM options"
+      },
+      {
+        "name": "OKAPI_URL",
+        "value": "http://okapi:9130",
+        "description": "Okapi gateway URL for cross-module calls"
+      }
+    ]
+  }
+}

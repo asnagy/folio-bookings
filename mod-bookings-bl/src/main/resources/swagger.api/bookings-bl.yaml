@@ -1,0 +1,389 @@
+openapi: 3.0.0
+info:
+  title: Bookings Business Logic API
+  description: >
+    API for the Bookings Business Logic module. Provides high-level booking
+    operations including creation with automatic recall triggering, status
+    management, and scheduled checkout activation.
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: /bookings
+
+paths:
+  /bookings:
+    get:
+      operationId: getBookings
+      summary: Search and retrieve bookings with enriched data
+      parameters:
+        - $ref: '#/components/parameters/trait_queryable_query'
+        - $ref: '#/components/parameters/trait_pageable_offset'
+        - $ref: '#/components/parameters/trait_pageable_limit'
+      responses:
+        '200':
+          description: Enriched booking collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: createBooking
+      summary: Create a new booking with full business logic
+      description: >
+        Creates a booking record and associates items. For any item that is
+        currently on loan, a recall is automatically triggered via mod-circulation,
+        and the booking status is set to RECALL_TRIGGERED. The booking is also
+        registered with mod-scheduler to trigger automatic checkout at the start date.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /bookings/{bookingId}:
+    get:
+      operationId: getBookingById
+      summary: Get a single booking with enriched patron and item details
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '200':
+          description: Enriched booking record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      operationId: updateBooking
+      summary: Update an existing booking
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '200':
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: deleteBooking
+      summary: Cancel and delete a booking
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '204':
+          description: Booking deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /bookings/{bookingId}/activate:
+    post:
+      operationId: activateBooking
+      summary: Manually activate a booking (perform checkout for all items)
+      description: >
+        Triggers the checkout process for all items in this booking immediately,
+        regardless of the scheduled start time. Requires appropriate override permission.
+      parameters:
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '200':
+          description: Booking activated, checkouts performed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    bookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    trait_queryable_query:
+      name: query
+      in: query
+      schema:
+        type: string
+    trait_pageable_offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    trait_pageable_limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 500
+        default: 10
+
+  schemas:
+    BookingRequest:
+      type: object
+      description: Request payload for creating or updating a booking
+      required:
+        - userId
+        - startDate
+        - endDate
+        - itemIds
+      properties:
+        userId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        itemIds:
+          type: array
+          description: List of inventory item UUIDs to include in this booking
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+        notes:
+          type: string
+          maxLength: 2000
+        pickupServicePointId:
+          type: string
+          format: uuid
+        overrideAvailability:
+          type: boolean
+          description: >
+            If true, allows booking items regardless of current loan status.
+            Requires the bookings.override-availability permission.
+          default: false
+
+    BookingResponse:
+      type: object
+      description: Enriched booking record with patron and item details
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        patron:
+          $ref: '#/components/schemas/PatronSummary'
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - PENDING
+            - RECALL_REQUIRED
+            - RECALL_TRIGGERED
+            - CONFIRMED
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+        notes:
+          type: string
+        pickupServicePointId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingItemSummary'
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    BookingCollection:
+      type: object
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingResponse'
+        totalRecords:
+          type: integer
+
+    PatronSummary:
+      type: object
+      description: Denormalized patron information for display
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        barcode:
+          type: string
+        patronGroup:
+          type: string
+
+    BookingItemSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        itemBarcode:
+          type: string
+        itemTitle:
+          type: string
+        callNumber:
+          type: string
+        effectiveLocation:
+          type: string
+        itemStatus:
+          type: string
+          description: Live item status from mod-inventory
+        recallStatus:
+          type: string
+          enum:
+            - NOT_REQUIRED
+            - REQUIRED
+            - TRIGGERED
+            - RETURNED
+
+    Metadata:
+      type: object
+      readOnly: true
+      properties:
+        createdDate:
+          type: string
+          format: date-time
+        createdByUserId:
+          type: string
+          format: uuid
+        updatedDate:
+          type: string
+          format: date-time
+        updatedByUserId:
+          type: string
+          format: uuid
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+
+    Errors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        total_records:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    Unauthorized:
+      description: Unauthorized
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'

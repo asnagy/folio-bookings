@@ -1,0 +1,13 @@
+/**
+ * BookingsApp.css
+ * Local CSS for the Bookings app — keep minimal.
+ * Use stripes-components CSS variables for theming.
+ */
+
+.bookingsApp {
+  height: 100%;
+}
+
+.recallWarningBanner {
+  margin-bottom: var(--gutter);
+}
