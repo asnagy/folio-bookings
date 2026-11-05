@@ -7,10 +7,10 @@ import {
   Icon,
   KeyValue,
   MessageBanner,
-  Pluggable,
   Row,
   TextField,
 } from '@folio/stripes/components';
+import { Pluggable, useOkapiKy } from '@folio/stripes/core';
 
 /**
  * PatronLookup
@@ -22,29 +22,22 @@ import {
  * Once a patron is selected, renders a read-only summary with a
  * "Clear" button to start over.
  */
-const PatronLookup = ({ patron, onSelectPatron, stripes }) => {
+const PatronLookup = ({ patron, onSelectPatron }) => {
   const intl = useIntl();
   const [barcodeInput, setBarcodeInput] = useState('');
   const [lookupError, setLookupError]   = useState(null);
   const [isSearching, setIsSearching]   = useState(false);
 
-  const okapiHeaders = {
-    'X-Okapi-Tenant': stripes.okapi.tenant,
-    'X-Okapi-Token': stripes.store.getState().okapi.token,
-    'Content-Type': 'application/json',
-  };
+  const ky = useOkapiKy();
 
   const lookupByBarcode = async () => {
     if (!barcodeInput.trim()) return;
     setLookupError(null);
     setIsSearching(true);
     try {
-      const res = await fetch(
-        `${stripes.okapi.url}/users?query=barcode=="${barcodeInput.trim()}"`,
-        { headers: okapiHeaders }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await ky.get('users', {
+        searchParams: { query: `barcode=="${barcodeInput.trim()}"`, limit: 1 },
+      }).json();
       if (!data.users || data.users.length === 0) {
         setLookupError(intl.formatMessage(
           { id: 'ui-bookings.error.patronNotFound' },
@@ -63,8 +56,10 @@ const PatronLookup = ({ patron, onSelectPatron, stripes }) => {
 
   // Patron already selected — show summary
   if (patron) {
-    const patronName = patron.personal
-      ? `${patron.personal.lastName || ''}, ${patron.personal.firstName || ''}`.replace(/^,\s*/, '')
+    const last = patron.personal?.lastName ?? patron.lastName;
+    const first = patron.personal?.firstName ?? patron.firstName;
+    const patronName = last
+      ? `${last}${first ? `, ${first}` : ''}`
       : patron.id;
 
     return (
@@ -171,7 +166,6 @@ const PatronLookup = ({ patron, onSelectPatron, stripes }) => {
 PatronLookup.propTypes = {
   patron:         PropTypes.object,
   onSelectPatron: PropTypes.func.isRequired,
-  stripes:        PropTypes.object.isRequired,
 };
 
 PatronLookup.defaultProps = {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { useOkapiKy } from '@folio/stripes/core';
 import {
   Accordion,
   AccordionSet,
@@ -14,14 +15,13 @@ import {
   Loading,
   MessageBanner,
   Pane,
-  PaneFooter,
   PaneMenu,
   Row,
 } from '@folio/stripes/components';
 
 import BookingItemsTable from '../BookingItemsTable';
 import BookingStatusBadge from '../BookingStatus/BookingStatusBadge';
-import { formatDateTimeDisplay, getBookingStatusLabel } from '../../util/bookingUtils';
+import { formatDateTimeDisplay } from '../../util/bookingUtils';
 
 /**
  * BookingDetail
@@ -51,59 +51,41 @@ const BookingDetail = (props) => {
 
   const canActivate = stripes.hasPerm('ui-bookings.create-edit');
 
-  // Accordion expand/collapse state
-  const [sections, setSections] = useState({
-    bookingInfo: true,
-    patronInfo: true,
-    itemsInfo: true,
-  });
+  const ky = useOkapiKy();
+  const intl = useIntl();
 
   // ------------------------------------------------------------------
   // Fetch booking on mount / id change
   // ------------------------------------------------------------------
 
   useEffect(() => {
-    if (!bookingId) return;
+    if (!bookingId) return undefined;
+    let cancelled = false;
     setIsLoading(true);
     setActionError(null);
 
-    fetch(`${stripes.okapi.url}/bookings/bookings/${bookingId}`, {
-      headers: {
-        'X-Okapi-Tenant': stripes.okapi.tenant,
-        'X-Okapi-Token': stripes.store.getState().okapi.token,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+    ky.get(`bookings/bookings/${bookingId}`).json()
       .then(data => {
+        if (cancelled) return;
         setBooking(data);
         setIsLoading(false);
       })
       .catch(err => {
+        if (cancelled) return;
+        setBooking(null);
         setActionError(err.message);
         setIsLoading(false);
       });
-  }, [bookingId, stripes]);
 
-  // ------------------------------------------------------------------
-  // Delete handler
-  // ------------------------------------------------------------------
+    return () => { cancelled = true; };
+  }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = () => {
     setIsDeleting(true);
-    fetch(`${stripes.okapi.url}/bookings/bookings/${bookingId}`, {
-      method: 'DELETE',
-      headers: {
-        'X-Okapi-Tenant': stripes.okapi.tenant,
-        'X-Okapi-Token': stripes.store.getState().okapi.token,
-      },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    ky.delete(`bookings/bookings/${bookingId}`)
+      .then(() => {
         setDeleteConfirmOpen(false);
+        setIsDeleting(false);
         onDelete();
       })
       .catch(err => {
@@ -113,26 +95,10 @@ const BookingDetail = (props) => {
       });
   };
 
-  // ------------------------------------------------------------------
-  // Activate (manual checkout trigger)
-  // ------------------------------------------------------------------
-
   const handleActivate = () => {
     setActivateConfirmOpen(false);
     setActionError(null);
-
-    fetch(`${stripes.okapi.url}/bookings/bookings/${bookingId}/activate`, {
-      method: 'POST',
-      headers: {
-        'X-Okapi-Tenant': stripes.okapi.tenant,
-        'X-Okapi-Token': stripes.store.getState().okapi.token,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+    ky.post(`bookings/bookings/${bookingId}/activate`).json()
       .then(updated => setBooking(updated))
       .catch(err => setActionError(err.message));
   };
@@ -185,7 +151,7 @@ const BookingDetail = (props) => {
         id="clickable-close-booking-detail"
         onClick={onClose}
         buttonStyle="none"
-        aria-label={<FormattedMessage id="ui-bookings.action.close" />}
+        aria-label={intl.formatMessage({ id: "ui-bookings.action.close" })}
       >
         <Icon icon="times" />
       </Button>
@@ -249,19 +215,15 @@ const BookingDetail = (props) => {
         </MessageBanner>
       )}
 
-      <AccordionStatus>
-        {({ expanded, toggleAll }) => (
-          <>
-            <Row end="xs">
-              <Col xs>
-                <ExpandAllButton
-                  accordionStatus={sections}
-                  onToggle={toggleAll}
-                />
-              </Col>
-            </Row>
+      <AccordionStatus initialStatus={{ bookingInfo: true, patronInfo: true, itemsInfo: true }}>
+        <>
+          <Row end="xs">
+            <Col xs>
+              <ExpandAllButton />
+            </Col>
+          </Row>
 
-            <AccordionSet accordionStatus={sections} onToggle={(id) => setSections(prev => ({ ...prev, [id]: !prev[id] }))}>
+          <AccordionSet>
 
               {/* ---- Booking Information ---- */}
               <Accordion
@@ -373,9 +335,8 @@ const BookingDetail = (props) => {
                 />
               </Accordion>
 
-            </AccordionSet>
-          </>
-        )}
+          </AccordionSet>
+        </>
       </AccordionStatus>
 
       {/* ---- Modals ---- */}

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Route, Switch } from 'react-router-dom';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   MultiColumnList,
   Pane,
@@ -10,17 +10,15 @@ import {
   SearchField,
   Button,
   Icon,
-  HasCommand,
-  expandAllSections,
-  collapseAllSections,
 } from '@folio/stripes/components';
-import { AppContextMenu, SearchAndSortQuery } from '@folio/stripes/smart-components';
+import { SearchAndSortQuery } from '@folio/stripes/smart-components';
 import { stripesConnect, useStripes } from '@folio/stripes/core';
 
 import BookingDetail from './BookingDetail/BookingDetail';
 import BookingForm from './BookingForm/BookingForm';
 import { BOOKINGS_RESOURCE } from '../manifest';
-import { getBookingStatusLabel, formatDateTimeDisplay } from '../util/bookingUtils';
+import BookingStatusBadge from './BookingStatus/BookingStatusBadge';
+import { formatDateTimeDisplay } from '../util/bookingUtils';
 
 import css from './BookingsApp.css';
 
@@ -48,6 +46,7 @@ const COLUMN_NAMES = ['patronName', 'startDate', 'endDate', 'status', 'itemCount
 const BookingsApp = (props) => {
   const { resources, mutator, match, history, location } = props;
   const stripes = useStripes();
+  const intl = useIntl();
 
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -93,7 +92,7 @@ const BookingsApp = (props) => {
     },
     startDate: (row) => formatDateTimeDisplay(row.startDate),
     endDate:   (row) => formatDateTimeDisplay(row.endDate),
-    status:    (row) => getBookingStatusLabel(row.status),
+    status:    (row) => <BookingStatusBadge status={row.status} />,
     itemCount: (row) => (row.items ? row.items.length : '—'),
     notes:     (row) => row.notes || '—',
   };
@@ -106,21 +105,6 @@ const BookingsApp = (props) => {
     itemCount:  <FormattedMessage id="ui-bookings.booking.itemCount" />,
     notes:      <FormattedMessage id="ui-bookings.booking.notes" />,
   };
-
-  // ------------------------------------------------------------------
-  // Keyboard shortcuts
-  // ------------------------------------------------------------------
-
-  const shortcuts = [
-    {
-      name: 'new',
-      handler: openCreate,
-    },
-    {
-      name: 'search',
-      handler: () => document.getElementById('bookings-search-field')?.focus(),
-    },
-  ];
 
   // ------------------------------------------------------------------
   // First pane: search sidebar + results list
@@ -140,7 +124,7 @@ const BookingsApp = (props) => {
       <PaneMenu>
         <Button
           id="clickable-new-booking"
-          aria-label={<FormattedMessage id="ui-bookings.booking.new" />}
+          aria-label={intl.formatMessage({ id: 'ui-bookings.booking.new' })}
           buttonStyle="primary"
           marginBottom0
           onClick={openCreate}
@@ -160,13 +144,12 @@ const BookingsApp = (props) => {
           <PaneMenu>
             <SearchField
               id="bookings-search-field"
-              ariaLabel={<FormattedMessage id="ui-bookings.search" />}
+              ariaLabel={intl.formatMessage({ id: 'ui-bookings.search' })}
               onChange={searchHandlers.query}
               onClear={searchHandlers.reset}
               onSubmit={onSubmitSearch}
               value={searchValue.query}
               marginBottom0
-              inputRef={null}
             />
           </PaneMenu>
         }
@@ -208,7 +191,6 @@ const BookingsApp = (props) => {
   // ------------------------------------------------------------------
 
   return (
-    <HasCommand commands={shortcuts} isWithinScope={() => true} scope={document.body}>
       <SearchAndSortQuery
         initialSearch=""
         initialSearchState={{ query: '' }}
@@ -277,7 +259,6 @@ const BookingsApp = (props) => {
           </Paneset>
         )}
       </SearchAndSortQuery>
-    </HasCommand>
   );
 };
 

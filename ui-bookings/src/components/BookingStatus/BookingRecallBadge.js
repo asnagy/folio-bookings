@@ -5,9 +5,9 @@ import { Badge } from '@folio/stripes/components';
 
 const RECALL_COLORS = {
   NOT_REQUIRED: 'default',
-  REQUIRED:     'warn',
-  TRIGGERED:    'warn',
-  RETURNED:     'success',
+  REQUIRED:     'red',
+  TRIGGERED:    'primary',
+  RETURNED:     'default',
 };
 
 /**

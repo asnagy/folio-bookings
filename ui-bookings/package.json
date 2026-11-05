@@ -22,8 +22,7 @@
   },
   "stripes": {
     "actsAs": [
-      "app",
-      "settings"
+      "app"
     ],
     "displayName": "ui-bookings.meta.title",
     "route": "/bookings",

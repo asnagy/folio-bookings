@@ -9,8 +9,6 @@ import {
   AccordionSet,
   Button,
   Col,
-  Datepicker,
-  FieldSet,
   Icon,
   KeyValue,
   Loading,
@@ -18,17 +16,39 @@ import {
   Pane,
   PaneFooter,
   PaneMenu,
-  Pluggable,
   Row,
   TextArea,
   TextField,
-  Timepicker,
 } from '@folio/stripes/components';
-import { useStripes } from '@folio/stripes/core';
+import { Pluggable, useOkapiKy } from '@folio/stripes/core';
 
 import BookingItemsTable from '../BookingItemsTable';
 import PatronLookup from './PatronLookup/PatronLookup';
-import { validateRequired, validateDateOrder } from '../../util/validation';
+
+const pad = (n) => String(n).padStart(2, '0');
+
+// ISO instant -> value for <input type="datetime-local"> (local time)
+const toLocalInput = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// datetime-local value -> ISO instant (UTC)
+const toIso = (local) => (local ? new Date(local).toISOString() : undefined);
+
+// Normalise a patron from either the find-user plugin (user record) or the booking API
+const normalisePatron = (p) => {
+  if (!p) return null;
+  return {
+    id: p.id,
+    barcode: p.barcode,
+    firstName: p.personal?.firstName ?? p.firstName,
+    lastName: p.personal?.lastName ?? p.lastName,
+    patronGroup: p.patronGroup,
+  };
+};
 
 /**
  * BookingForm
@@ -65,9 +85,7 @@ const BookingForm = (props) => {
   const [initialValues, setInitialValues] = useState({
     userId: '',
     startDate: '',
-    startTime: '',
     endDate: '',
-    endTime: '',
     notes: '',
     items: [],
   });
@@ -78,11 +96,7 @@ const BookingForm = (props) => {
   const [itemLookupError, setItemLookupError] = useState(null);
   const [checkedOutItems, setCheckedOutItems] = useState([]);
 
-  const okapiHeaders = {
-    'X-Okapi-Tenant': stripes.okapi.tenant,
-    'X-Okapi-Token': stripes.store.getState().okapi.token,
-    'Content-Type': 'application/json',
-  };
+  const ky = useOkapiKy();
 
   // ------------------------------------------------------------------
   // Load existing booking when editing
@@ -91,19 +105,16 @@ const BookingForm = (props) => {
   useEffect(() => {
     if (!isEditing) return;
     setIsLoading(true);
-    fetch(`${stripes.okapi.url}/bookings/bookings/${bookingId}`, { headers: okapiHeaders })
-      .then(r => r.json())
+    ky.get(`bookings/bookings/${bookingId}`).json()
       .then(data => {
         setInitialValues({
           userId: data.userId || '',
-          startDate: data.startDate ? data.startDate.split('T')[0] : '',
-          startTime: data.startDate ? data.startDate.split('T')[1]?.slice(0, 5) : '',
-          endDate: data.endDate ? data.endDate.split('T')[0] : '',
-          endTime: data.endDate ? data.endDate.split('T')[1]?.slice(0, 5) : '',
+          startDate: toLocalInput(data.startDate),
+          endDate: toLocalInput(data.endDate),
           notes: data.notes || '',
           items: data.items || [],
         });
-        if (data.patron) setPatron(data.patron);
+        setPatron(normalisePatron(data.patron) || (data.userId ? { id: data.userId } : null));
         const checkedOut = (data.items || []).filter(i => i.itemStatus === 'Checked out');
         setCheckedOutItems(checkedOut);
         setIsLoading(false);
@@ -112,14 +123,14 @@ const BookingForm = (props) => {
         setSubmitError(err.message);
         setIsLoading(false);
       });
-  }, [bookingId]);
+  }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------------
   // Patron selection (from Pluggable find-user)
   // ------------------------------------------------------------------
 
   const onSelectPatron = useCallback((selectedUser) => {
-    setPatron(selectedUser);
+    setPatron(normalisePatron(selectedUser));
   }, []);
 
   // ------------------------------------------------------------------
@@ -134,12 +145,9 @@ const BookingForm = (props) => {
       return;
     }
     try {
-      const res = await fetch(
-        `${stripes.okapi.url}/inventory/items?query=barcode=="${barcode.trim()}"`,
-        { headers: okapiHeaders }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await ky.get('inventory/items', {
+        searchParams: { query: `barcode=="${barcode.trim()}"`, limit: 1 },
+      }).json();
       if (!data.items || data.items.length === 0) {
         setItemLookupError(intl.formatMessage(
           { id: 'ui-bookings.error.itemNotFound' }, { barcode }
@@ -165,7 +173,7 @@ const BookingForm = (props) => {
     } catch (err) {
       setItemLookupError(err.message);
     }
-  }, [intl, okapiHeaders]);
+  }, [intl, ky]);
 
   // ------------------------------------------------------------------
   // Instance plugin callback — user selected an instance, now pick item
@@ -176,12 +184,9 @@ const BookingForm = (props) => {
     if (!instance?.id) return;
     try {
       // Fetch items for this instance
-      const res = await fetch(
-        `${stripes.okapi.url}/inventory/items?query=holdingsRecord.instanceId=="${instance.id}"&limit=200`,
-        { headers: okapiHeaders }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await ky.get('inventory/items', {
+        searchParams: { query: `holdingsRecord.instanceId=="${instance.id}"`, limit: 200 },
+      }).json();
       const items = data.items || [];
 
       if (items.length === 0) {
@@ -233,7 +238,7 @@ const BookingForm = (props) => {
     } catch (err) {
       setItemLookupError(err.message);
     }
-  }, [intl, okapiHeaders]);
+  }, [intl, ky]);
 
   // ------------------------------------------------------------------
   // Form submission
@@ -241,8 +246,8 @@ const BookingForm = (props) => {
 
   const onSubmit = useCallback(async (values) => {
     setSubmitError(null);
-    const startDateTime = `${values.startDate}T${values.startTime || '00:00'}:00Z`;
-    const endDateTime   = `${values.endDate}T${values.endTime || '00:00'}:00Z`;
+    const startDateTime = toIso(values.startDate);
+    const endDateTime   = toIso(values.endDate);
 
     const payload = {
       userId: patron?.id || values.userId,
@@ -253,28 +258,19 @@ const BookingForm = (props) => {
     };
 
     try {
-      const url = isEditing
-        ? `${stripes.okapi.url}/bookings/bookings/${bookingId}`
-        : `${stripes.okapi.url}/bookings/bookings`;
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: okapiHeaders,
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.errors?.[0]?.message || `HTTP ${res.status}`);
-      }
-
-      const saved = method === 'POST' ? await res.json() : { id: bookingId };
+      const saved = isEditing
+        ? await ky.put(`bookings/bookings/${bookingId}`, { json: payload }).then(() => ({ id: bookingId }))
+        : await ky.post('bookings/bookings', { json: payload }).json();
       onSubmitSuccess(saved);
     } catch (err) {
-      setSubmitError(err.message);
+      let message = err.message;
+      try {
+        const body = await err.response?.json();
+        message = body?.errors?.[0]?.message || message;
+      } catch (e) { /* keep default message */ }
+      setSubmitError(message);
     }
-  }, [patron, isEditing, bookingId, onSubmitSuccess, okapiHeaders]);
+  }, [patron, isEditing, bookingId, onSubmitSuccess, ky]);
 
   // ------------------------------------------------------------------
   // Validation
@@ -292,8 +288,8 @@ const BookingForm = (props) => {
       errors.endDate = intl.formatMessage({ id: 'ui-bookings.validation.required' });
     }
     if (values.startDate && values.endDate) {
-      const start = new Date(`${values.startDate}T${values.startTime || '00:00'}`);
-      const end   = new Date(`${values.endDate}T${values.endTime || '00:00'}`);
+      const start = new Date(values.startDate);
+      const end   = new Date(values.endDate);
       if (start >= end) {
         errors.endDate = intl.formatMessage({ id: 'ui-bookings.validation.endAfterStart' });
       }
@@ -398,7 +394,6 @@ const BookingForm = (props) => {
                 <PatronLookup
                   patron={patron}
                   onSelectPatron={onSelectPatron}
-                  stripes={stripes}
                 />
               </Accordion>
 
@@ -412,32 +407,18 @@ const BookingForm = (props) => {
                     <Field
                       name="startDate"
                       label={<FormattedMessage id="ui-bookings.booking.startDate" />}
-                      component={Datepicker}
+                      component={TextField}
+                      type="datetime-local"
                       required
                     />
                   </Col>
-                  <Col xs={6}>
-                    <Field
-                      name="startTime"
-                      label={<FormattedMessage id="ui-bookings.booking.startTime" />}
-                      component={Timepicker}
-                    />
-                  </Col>
-                </Row>
-                <Row>
                   <Col xs={6}>
                     <Field
                       name="endDate"
                       label={<FormattedMessage id="ui-bookings.booking.endDate" />}
-                      component={Datepicker}
+                      component={TextField}
+                      type="datetime-local"
                       required
-                    />
-                  </Col>
-                  <Col xs={6}>
-                    <Field
-                      name="endTime"
-                      label={<FormattedMessage id="ui-bookings.booking.endTime" />}
-                      component={Timepicker}
                     />
                   </Col>
                 </Row>

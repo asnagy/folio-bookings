@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   Button,
   Icon,
@@ -29,6 +29,7 @@ const EDIT_COLUMNS       = [...READ_ONLY_COLUMNS, 'actions'];
  * When readOnly=false, each row has a remove button.
  */
 const BookingItemsTable = ({ items, onRemove, readOnly }) => {
+  const intl = useIntl();
   const visibleColumns = readOnly ? READ_ONLY_COLUMNS : EDIT_COLUMNS;
 
   const columnMapping = {
@@ -46,13 +47,13 @@ const BookingItemsTable = ({ items, onRemove, readOnly }) => {
     callNumber:   (row) => row.callNumber   || <NoValue />,
     itemStatus:   (row) => row.itemStatus   || <NoValue />,
     recallStatus: (row) => <BookingRecallBadge status={row.recallStatus} />,
-    actions:      (row, index) => (
+    actions:      (row) => (
       !readOnly && (
         <Button
           buttonStyle="none"
-          id={`clickable-remove-item-${index}`}
-          onClick={() => onRemove(index)}
-          aria-label={<FormattedMessage id="ui-bookings.item.remove" />}
+          id={`clickable-remove-item-${row.rowIndex}`}
+          onClick={() => onRemove(row.rowIndex)}
+          aria-label={intl.formatMessage({ id: 'ui-bookings.item.remove' })}
         >
           <Icon icon="times-circle" />
         </Button>

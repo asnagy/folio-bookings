@@ -8,12 +8,12 @@ import { Badge } from '@folio/stripes/components';
  */
 const STATUS_COLORS = {
   PENDING:          'default',
-  RECALL_REQUIRED:  'warn',
-  RECALL_TRIGGERED: 'warn',
+  RECALL_REQUIRED:  'red',
+  RECALL_TRIGGERED: 'red',
   CONFIRMED:        'primary',
-  ACTIVE:           'success',
+  ACTIVE:           'primary',
   COMPLETED:        'default',
-  CANCELLED:        'error',
+  CANCELLED:        'default',
 };
 
 /**
