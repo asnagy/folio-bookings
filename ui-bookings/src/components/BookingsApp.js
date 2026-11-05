@@ -213,8 +213,8 @@ const BookingsApp = (props) => {
         initialSearch=""
         initialSearchState={{ query: '' }}
         initialSortState={{ sort: '-startDate' }}
-        queryGetter={(res) => res?.query}
-        querySetter={mutator.query}
+        queryGetter={() => resources?.query || {}}
+        querySetter={({ nsValues }) => mutator.query.update(nsValues)}
         setQueryOnMount
       >
         {(searchAndSortProps) => (
