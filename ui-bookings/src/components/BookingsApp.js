@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Route, Switch } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
-import { stripesConnect } from '@folio/stripes/connect';
 import {
   MultiColumnList,
   Pane,
@@ -16,7 +15,7 @@ import {
   collapseAllSections,
 } from '@folio/stripes/components';
 import { AppContextMenu, SearchAndSortQuery } from '@folio/stripes/smart-components';
-import { useStripes } from '@folio/stripes/core';
+import { stripesConnect, useStripes } from '@folio/stripes/core';
 
 import BookingDetail from './BookingDetail/BookingDetail';
 import BookingForm from './BookingForm/BookingForm';
