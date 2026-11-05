@@ -120,21 +120,19 @@ const BookingsApp = (props) => {
 
     const searchHandlers = getSearchHandlers();
 
-    const newBookingButton = canCreate ? (
-      <PaneMenu>
+    const actionMenu = canCreate
+      ? ({ onToggle }) => (
         <Button
           id="clickable-new-booking"
-          aria-label={intl.formatMessage({ id: 'ui-bookings.booking.new' })}
-          buttonStyle="primary"
-          marginBottom0
-          onClick={openCreate}
+          buttonStyle="dropdownItem"
+          onClick={() => { onToggle(); openCreate(); }}
         >
           <Icon icon="plus-sign">
             <FormattedMessage id="ui-bookings.booking.new" />
           </Icon>
         </Button>
-      </PaneMenu>
-    ) : null;
+      )
+      : null;
 
     return (
       <Pane
@@ -153,7 +151,7 @@ const BookingsApp = (props) => {
             />
           </PaneMenu>
         }
-        lastMenu={newBookingButton}
+        actionMenu={actionMenu}
         paneSub={
           isLoading
             ? <FormattedMessage id="ui-bookings.loading" />
