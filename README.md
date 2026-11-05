@@ -168,3 +168,15 @@ Refer to the FOLIO DevOps guide:
 - [Stripes Module Developer Guide](https://github.com/folio-org/stripes/blob/main/doc/dev-guide.md)
 - [FOLIO Spring Way Guide](https://dev.folio.org/start/primer-develop-backend/)
 - [OpenAPI Primer for FOLIO](https://dev.folio.org/start/primer-develop-backend/)
+
+## Testing the UI without the backend modules
+
+`mod-bookings` / `mod-bookings-bl` are not deployed on public FOLIO hosts, so `/bookings/*` returns "no Route matched".
+`mock-backend/` answers `/bookings/*` from memory with sample data and forwards everything else to your real gateway:
+
+```
+TARGET=https://<your-gateway-url> node mock-backend/server.js   # Node 18+, listens on :9130
+```
+
+Then set `okapi.url` in `platform-lsp/stripes.config.js.local` to `http://localhost:9130` and restart `stripes serve`.
+Data resets when the mock restarts. This is for UI testing only.

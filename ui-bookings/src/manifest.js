@@ -6,6 +6,17 @@
  * across connected components without duplication.
  */
 
+import { filters2cql } from '@folio/stripes/components';
+
+export const BOOKING_STATUSES = [
+  'PENDING', 'RECALL_REQUIRED', 'RECALL_TRIGGERED', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED',
+];
+
+export const FILTER_CONFIG = [
+  { name: 'status', cql: 'status', values: BOOKING_STATUSES },
+  { name: 'recall', cql: 'recallRequired', values: ['true'] },
+];
+
 export const BOOKINGS_RESOURCE = {
   type: 'okapi',
   path: 'bookings/bookings',
@@ -18,7 +29,8 @@ export const BOOKINGS_RESOURCE = {
         const { query, filters, sort } = resourceValues.query || {};
         const parts = [];
         if (query) parts.push(`(title="*${query}*" OR patronName="*${query}*")`);
-        if (filters) parts.push(filters);
+        const filterCql = filters ? filters2cql(FILTER_CONFIG, filters) : '';
+        if (filterCql) parts.push(filterCql);
         const cql = parts.length ? parts.join(' AND ') : 'cql.allRecords=1';
         return sort ? `${cql} sortby ${sort}` : cql;
       },

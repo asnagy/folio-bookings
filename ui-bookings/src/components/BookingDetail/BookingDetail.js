@@ -48,6 +48,7 @@ const BookingDetail = (props) => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [activateConfirmOpen, setActivateConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [servicePointName, setServicePointName] = useState(null);
 
   const canActivate = stripes.hasPerm('ui-bookings.create-edit');
 
@@ -79,6 +80,14 @@ const BookingDetail = (props) => {
 
     return () => { cancelled = true; };
   }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setServicePointName(null);
+    if (!booking?.pickupServicePointId) return;
+    ky.get(`service-points/${booking.pickupServicePointId}`).json()
+      .then(sp => setServicePointName(sp.name))
+      .catch(() => {});
+  }, [booking?.pickupServicePointId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = () => {
     setIsDeleting(true);
@@ -240,7 +249,7 @@ const BookingDetail = (props) => {
                   <Col xs={6}>
                     <KeyValue
                       label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
-                      value={booking.pickupServicePointId || '—'}
+                      value={servicePointName || booking.pickupServicePointId || '—'}
                     />
                   </Col>
                 </Row>

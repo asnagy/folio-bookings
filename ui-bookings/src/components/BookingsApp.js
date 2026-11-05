@@ -8,15 +8,19 @@ import {
   PaneMenu,
   Paneset,
   SearchField,
+  Accordion,
+  AccordionSet,
   Button,
+  FilterAccordionHeader,
   Icon,
 } from '@folio/stripes/components';
-import { SearchAndSortQuery } from '@folio/stripes/smart-components';
+import { CheckboxFilter, SearchAndSortQuery } from '@folio/stripes/smart-components';
 import { stripesConnect, useStripes } from '@folio/stripes/core';
 
 import BookingDetail from './BookingDetail/BookingDetail';
 import BookingForm from './BookingForm/BookingForm';
-import { BOOKINGS_RESOURCE } from '../manifest';
+import { BOOKINGS_RESOURCE, BOOKING_STATUSES } from '../manifest';
+import BookingRecallBadge from './BookingStatus/BookingRecallBadge';
 import BookingStatusBadge from './BookingStatus/BookingStatusBadge';
 import { formatDateTimeDisplay } from '../util/bookingUtils';
 
@@ -26,12 +30,13 @@ const COLUMN_WIDTHS = {
   patronName:  '20%',
   startDate:   '15%',
   endDate:     '15%',
-  status:      '15%',
-  itemCount:   '10%',
-  notes:       '25%',
+  status:      '13%',
+  recall:      '12%',
+  itemCount:   '8%',
+  notes:       '17%',
 };
 
-const COLUMN_NAMES = ['patronName', 'startDate', 'endDate', 'status', 'itemCount', 'notes'];
+const COLUMN_NAMES = ['patronName', 'startDate', 'endDate', 'status', 'recall', 'itemCount', 'notes'];
 
 /**
  * BookingsApp
@@ -93,6 +98,12 @@ const BookingsApp = (props) => {
     startDate: (row) => formatDateTimeDisplay(row.startDate),
     endDate:   (row) => formatDateTimeDisplay(row.endDate),
     status:    (row) => <BookingStatusBadge status={row.status} />,
+    recall:    (row) => {
+      const n = (row.items || []).filter(i => i.recallStatus === 'REQUIRED' || i.recallStatus === 'TRIGGERED').length;
+      if (!n) return '—';
+      const triggered = (row.items || []).every(i => i.recallStatus !== 'REQUIRED');
+      return <BookingRecallBadge status={triggered ? 'TRIGGERED' : 'REQUIRED'} />;
+    },
     itemCount: (row) => (row.items ? row.items.length : '—'),
     notes:     (row) => row.notes || '—',
   };
@@ -102,6 +113,7 @@ const BookingsApp = (props) => {
     startDate:  <FormattedMessage id="ui-bookings.booking.startDate" />,
     endDate:    <FormattedMessage id="ui-bookings.booking.endDate" />,
     status:     <FormattedMessage id="ui-bookings.booking.status" />,
+    recall:     <FormattedMessage id="ui-bookings.booking.recall" />,
     itemCount:  <FormattedMessage id="ui-bookings.booking.itemCount" />,
     notes:      <FormattedMessage id="ui-bookings.booking.notes" />,
   };
@@ -116,7 +128,10 @@ const BookingsApp = (props) => {
       getSearchHandlers,
       onSubmitSearch,
       resetAll,
+      activeFilters,
+      getFilterHandlers,
     } = searchAndSortProps;
+    const filterHandlers = getFilterHandlers();
 
     const searchHandlers = getSearchHandlers();
 
@@ -134,23 +149,85 @@ const BookingsApp = (props) => {
       )
       : null;
 
-    return (
+    const statusOptions = BOOKING_STATUSES.map(value => ({
+      value,
+      label: intl.formatMessage({ id: `ui-bookings.status.${value.toLowerCase()}` }),
+    }));
+    const recallOptions = [{
+      value: 'true',
+      label: intl.formatMessage({ id: 'ui-bookings.filters.recallRequired' }),
+    }];
+
+    const filterPane = (
+      <Pane
+        id="bookings-filter-pane"
+        defaultWidth="22%"
+        paneTitle={<FormattedMessage id="ui-bookings.filters.title" />}
+      >
+        <form onSubmit={onSubmitSearch}>
+          <SearchField
+            id="bookings-search-field"
+            ariaLabel={intl.formatMessage({ id: 'ui-bookings.search' })}
+            autoFocus
+            onChange={searchHandlers.query}
+            onClear={searchHandlers.reset}
+            value={searchValue.query}
+          />
+          <Button
+            type="submit"
+            buttonStyle="primary"
+            fullWidth
+            disabled={!searchValue.query}
+          >
+            <FormattedMessage id="ui-bookings.action.search" />
+          </Button>
+          <Button
+            buttonStyle="none"
+            fullWidth
+            onClick={resetAll}
+          >
+            <Icon icon="times-circle-solid">
+              <FormattedMessage id="ui-bookings.action.resetAll" />
+            </Icon>
+          </Button>
+        </form>
+        <AccordionSet>
+          <Accordion
+            id="filter-status"
+            label={<FormattedMessage id="ui-bookings.filters.status" />}
+            header={FilterAccordionHeader}
+            displayClearButton={(activeFilters.state.status || []).length > 0}
+            onClearFilter={() => filterHandlers.clearGroup('status')}
+          >
+            <CheckboxFilter
+              name="status"
+              dataOptions={statusOptions}
+              selectedValues={activeFilters.state.status}
+              onChange={filterHandlers.state}
+            />
+          </Accordion>
+          <Accordion
+            id="filter-recall"
+            label={<FormattedMessage id="ui-bookings.filters.recall" />}
+            header={FilterAccordionHeader}
+            displayClearButton={(activeFilters.state.recall || []).length > 0}
+            onClearFilter={() => filterHandlers.clearGroup('recall')}
+          >
+            <CheckboxFilter
+              name="recall"
+              dataOptions={recallOptions}
+              selectedValues={activeFilters.state.recall}
+              onChange={filterHandlers.state}
+            />
+          </Accordion>
+        </AccordionSet>
+      </Pane>
+    );
+
+    const resultsPane = (
       <Pane
         id="bookings-results-pane"
         defaultWidth="fill"
-        firstMenu={
-          <PaneMenu>
-            <SearchField
-              id="bookings-search-field"
-              ariaLabel={intl.formatMessage({ id: 'ui-bookings.search' })}
-              onChange={searchHandlers.query}
-              onClear={searchHandlers.reset}
-              onSubmit={onSubmitSearch}
-              value={searchValue.query}
-              marginBottom0
-            />
-          </PaneMenu>
-        }
         actionMenu={actionMenu}
         paneSub={
           isLoading
@@ -182,6 +259,13 @@ const BookingsApp = (props) => {
         />
       </Pane>
     );
+
+    return (
+      <>
+        {filterPane}
+        {resultsPane}
+      </>
+    );
   };
 
   // ------------------------------------------------------------------
@@ -192,6 +276,7 @@ const BookingsApp = (props) => {
       <SearchAndSortQuery
         initialSearch=""
         initialSearchState={{ query: '' }}
+        initialFilterState={{}}
         initialSortState={{ sort: '-startDate' }}
         queryGetter={() => resources?.query || {}}
         querySetter={({ nsValues }) => mutator.query.update(nsValues)}

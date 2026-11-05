@@ -76,5 +76,14 @@
   "confirm.delete.message": "Are you sure you want to delete the booking for {patron}? This cannot be undone.",
   "confirm.activate.heading": "Activate booking",
   "confirm.activate.message": "This will immediately check out all items in this booking to the patron. Continue?",
-  "settings.general": "General"
+  "settings.general": "General",
+  "filters.title": "Search & filter",
+  "filters.status": "Status",
+  "filters.recall": "Recall",
+  "filters.recallRequired": "Has items needing recall",
+  "action.resetAll": "Reset all",
+  "booking.recall": "Recall",
+  "booking.selectServicePoint": "Select service point",
+  "booking.overrideAvailability": "Override item availability (allow overlapping bookings)",
+  "recall.flagged": "{count, plural, one {# item} other {# items}} to recall"
 }

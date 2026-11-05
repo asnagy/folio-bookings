@@ -8,6 +8,7 @@ import {
   Accordion,
   AccordionSet,
   Button,
+  Checkbox,
   Col,
   Icon,
   KeyValue,
@@ -17,6 +18,7 @@ import {
   PaneFooter,
   PaneMenu,
   Row,
+  Select,
   TextArea,
   TextField,
 } from '@folio/stripes/components';
@@ -86,9 +88,13 @@ const BookingForm = (props) => {
     userId: '',
     startDate: '',
     endDate: '',
+    pickupServicePointId: '',
+    overrideAvailability: false,
     notes: '',
     items: [],
   });
+  const [servicePoints, setServicePoints] = useState([]);
+  const canOverride = stripes.hasPerm('ui-bookings.override-availability');
   const [patron, setPatron]           = useState(null);
   const [isLoading, setIsLoading]     = useState(isEditing);
   const [submitError, setSubmitError] = useState(null);
@@ -111,6 +117,8 @@ const BookingForm = (props) => {
           userId: data.userId || '',
           startDate: toLocalInput(data.startDate),
           endDate: toLocalInput(data.endDate),
+          pickupServicePointId: data.pickupServicePointId || '',
+          overrideAvailability: false,
           notes: data.notes || '',
           items: data.items || [],
         });
@@ -124,6 +132,12 @@ const BookingForm = (props) => {
         setIsLoading(false);
       });
   }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    ky.get('service-points', { searchParams: { query: 'pickupLocation==true sortby name', limit: 200 } }).json()
+      .then(data => setServicePoints(data.servicepoints || []))
+      .catch(() => setServicePoints([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------------
   // Patron selection (from Pluggable find-user)
@@ -253,6 +267,8 @@ const BookingForm = (props) => {
       userId: patron?.id || values.userId,
       startDate: startDateTime,
       endDate: endDateTime,
+      pickupServicePointId: values.pickupServicePointId || undefined,
+      overrideAvailability: canOverride ? Boolean(values.overrideAvailability) : undefined,
       notes: values.notes || undefined,
       itemIds: (values.items || []).map(i => i.itemId),
     };
@@ -270,7 +286,7 @@ const BookingForm = (props) => {
       } catch (e) { /* keep default message */ }
       setSubmitError(message);
     }
-  }, [patron, isEditing, bookingId, onSubmitSuccess, ky]);
+  }, [patron, isEditing, bookingId, onSubmitSuccess, ky, canOverride]);
 
   // ------------------------------------------------------------------
   // Validation
@@ -422,6 +438,31 @@ const BookingForm = (props) => {
                     />
                   </Col>
                 </Row>
+                <Row>
+                  <Col xs={12}>
+                    <Field
+                      name="pickupServicePointId"
+                      label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
+                      component={Select}
+                      dataOptions={[
+                        { value: '', label: intl.formatMessage({ id: 'ui-bookings.booking.selectServicePoint' }) },
+                        ...servicePoints.map(sp => ({ value: sp.id, label: sp.name })),
+                      ]}
+                    />
+                  </Col>
+                </Row>
+                {canOverride && (
+                  <Row>
+                    <Col xs={12}>
+                      <Field
+                        name="overrideAvailability"
+                        type="checkbox"
+                        label={<FormattedMessage id="ui-bookings.booking.overrideAvailability" />}
+                        component={Checkbox}
+                      />
+                    </Col>
+                  </Row>
+                )}
               </Accordion>
 
               {/* ---- Items ---- */}
