@@ -14,3 +14,6 @@ yarn-error.log
 .vscode/
 *.iml
 .DS_Store
+
+# Local settings
+.env

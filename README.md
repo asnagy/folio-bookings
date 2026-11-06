@@ -180,3 +180,27 @@ TARGET=https://<your-gateway-url> node mock-backend/server.js   # Node 18+, list
 
 Then set `okapi.url` in `platform-lsp/stripes.config.js.local` to `http://localhost:9130` and restart `stripes serve`.
 Data resets when the mock restarts. This is for UI testing only.
+
+## Run the backend locally with Docker
+
+Runs the real `mod-bookings` and `mod-bookings-bl` on your machine (Postgres included). A small dev gateway
+sends `/bookings/*` to these modules and forwards everything else (login, users, inventory, circulation)
+to your hosted FOLIO. Works on Apple Silicon and Intel.
+
+1. Install Docker Desktop and start it.
+2. In the repo root: `cp .env.example .env`, then edit `.env`:
+   - `TARGET_URL` = the `okapi.url` your platform used before (no trailing slash)
+   - `TENANT` = your tenant id
+3. `docker compose up --build` (the first build takes several minutes: it compiles both modules).
+   Wait for `tenant <id> ready` in the output.
+4. In `platform-lsp/stripes.config.js.local` set `okapi.url` to `http://localhost:9130` (plain `http`), restart
+   `stripes serve`, clear site data for `localhost:3000`, and sign in again.
+
+Useful commands: `docker compose logs -f mod-bookings-bl` (watch recalls/checkouts), `docker compose down`
+(stop), `docker compose down -v` (stop and erase bookings data).
+
+Notes:
+- Use either this or `mock-backend/`, not both (both use port 9130).
+- This gateway does no permission checks on `/bookings/*`. It is for local development only.
+- The BL module reuses your browser session (cookie / token) to call Users, Inventory and Circulation on your hosted FOLIO,
+  so recalls and checkouts really happen there. Use test items and a test patron.

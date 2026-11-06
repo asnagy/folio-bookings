@@ -1,0 +1,78 @@
+# Local Bookings backend: Postgres + mod-bookings + mod-bookings-bl, behind a dev gateway that
+# forwards everything else to your real FOLIO. See README "Run the backend locally with Docker".
+#
+#   cp .env.example .env     # set TARGET_URL
+#   docker compose up --build
+#
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: okapi_modules
+      POSTGRES_USER: folio_admin
+      POSTGRES_PASSWORD: folio_admin
+    volumes:
+      - bookings-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio_admin -d okapi_modules"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mod-bookings:
+    build: ./mod-bookings
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: okapi_modules
+      DB_USERNAME: folio_admin
+      DB_PASSWORD: folio_admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8081'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mod-bookings-bl:
+    build: ./mod-bookings-bl
+    environment:
+      # The BL module calls Users, Inventory, Circulation and storage through the dev gateway
+      OKAPI_URL: http://gateway:9130
+    depends_on:
+      - mod-bookings
+
+  gateway:
+    build: ./dev-gateway
+    environment:
+      TARGET_URL: ${TARGET_URL:?Set TARGET_URL in .env to your FOLIO gateway URL}
+      BL_URL: http://mod-bookings-bl:8082
+      STORAGE_URL: http://mod-bookings:8081
+    ports:
+      - "9130:9130"
+    depends_on:
+      - mod-bookings
+      - mod-bookings-bl
+
+  # One-shot: creates the Bookings tables for your tenant (safe to re-run)
+  tenant-init:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      mod-bookings:
+        condition: service_healthy
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - >
+        curl -fsS -X POST http://mod-bookings:8081/_/tenant
+        -H "X-Okapi-Tenant: ${TENANT:-diku}"
+        -H "X-Okapi-Url: http://gateway:9130"
+        -H "Content-Type: application/json"
+        -d '{"module_to":"mod-bookings-1.0.0","parameters":[]}'
+        && echo "tenant ${TENANT:-diku} ready"
+
+volumes:
+  bookings-db:

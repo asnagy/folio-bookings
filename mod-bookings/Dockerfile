@@ -1,14 +1,15 @@
-FROM folioci/alpine-jre-openjdk17:latest
+# Build with Maven, then run on a slim JRE. Works on Apple Silicon (arm64) and Intel (amd64).
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+COPY descriptors ./descriptors
+RUN mvn -B -q -DskipTests package
 
-ENV APP_FILE mod-bookings.jar
-
-ENV HOME=/home/folio
-WORKDIR ${HOME}
-
-COPY target/*.jar ${APP_FILE}
-
+FROM eclipse-temurin:17-jre
+RUN useradd --create-home folio
+WORKDIR /home/folio
+COPY --from=build /build/target/mod-bookings-*.jar app.jar
 USER folio
-
 EXPOSE 8081
-
-ENTRYPOINT java ${JAVA_OPTIONS} -jar ${APP_FILE}
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTIONS -jar app.jar"]
