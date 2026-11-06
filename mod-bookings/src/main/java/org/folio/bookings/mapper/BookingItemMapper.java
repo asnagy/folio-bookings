@@ -12,7 +12,6 @@ import java.util.UUID;
 public interface BookingItemMapper {
 
   @Mapping(target = "booking", ignore = true)
-  @Mapping(source = "bookingId", target = "booking.id")
   BookingItemEntity toEntity(BookingItem dto);
 
   @Mapping(source = "booking.id", target = "bookingId")

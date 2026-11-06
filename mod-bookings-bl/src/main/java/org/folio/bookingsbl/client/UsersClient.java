@@ -17,7 +17,16 @@ public interface UsersClient {
   @GetMapping("/users/{id}")
   UserDto getUser(@PathVariable UUID id);
 
+  @GetMapping("/users")
+  UsersCollection getUsers(@RequestParam("query") String query, @RequestParam("limit") int limit);
+
   // ---- inner DTOs ----
+
+  @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  class UsersCollection {
+    private java.util.List<UserDto> users;
+  }
 
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)

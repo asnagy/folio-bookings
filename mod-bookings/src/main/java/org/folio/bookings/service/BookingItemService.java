@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.bookings.domain.dto.BookingItem;
 import org.folio.bookings.domain.dto.BookingItemCollection;
+import org.folio.bookings.cql.BookingQueries;
 import org.folio.bookings.entity.BookingEntity;
 import org.folio.bookings.entity.BookingItemEntity;
 import org.folio.bookings.exception.BookingNotFoundException;
@@ -29,8 +30,9 @@ public class BookingItemService {
   @Transactional(readOnly = true)
   public BookingItemCollection getBookingItems(String query, Integer offset, Integer limit) {
     log.debug("getBookingItems:: offset={} limit={}", offset, limit);
-    var pageable = PageRequest.of(offset / limit, limit);
-    var page = bookingItemRepository.findAll(pageable);
+    int pageSize = Math.max(limit, 1);
+    var pageable = PageRequest.of(offset / pageSize, pageSize, BookingQueries.itemSort(query));
+    var page = bookingItemRepository.findAll(BookingQueries.itemSpec(query), pageable);
     var collection = new BookingItemCollection();
     collection.setBookingItems(bookingItemMapper.toDtoList(page.getContent()));
     collection.setTotalRecords((int) page.getTotalElements());
@@ -43,6 +45,9 @@ public class BookingItemService {
       bookingItem.getBookingId(), bookingItem.getItemId());
 
     var bookingId = bookingItem.getBookingId();
+    if (bookingId == null) {
+      throw new BookingValidationException("bookingId is required");
+    }
     BookingEntity booking = bookingRepository.findById(bookingId)
       .orElseThrow(() -> new BookingNotFoundException(bookingId));
 

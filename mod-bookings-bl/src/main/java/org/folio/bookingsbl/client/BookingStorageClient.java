@@ -1,8 +1,5 @@
 package org.folio.bookingsbl.client;
 
-import org.folio.bookingsbl.domain.dto.BookingRequest;
-import org.folio.bookingsbl.domain.dto.BookingResponse;
-import org.folio.bookingsbl.domain.dto.BookingCollection;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,19 +13,19 @@ import java.util.UUID;
 public interface BookingStorageClient {
 
   @GetMapping("/bookings-storage/bookings")
-  BookingCollection getBookings(
+  StorageBookingCollection getBookings(
     @RequestParam(required = false) String query,
     @RequestParam(defaultValue = "0") int offset,
     @RequestParam(defaultValue = "10") int limit);
 
   @GetMapping("/bookings-storage/bookings/{id}")
-  BookingResponse getBookingById(@PathVariable UUID id);
+  StorageBooking getBookingById(@PathVariable UUID id);
 
   @PostMapping("/bookings-storage/bookings")
-  BookingResponse createBooking(@RequestBody BookingRequest booking);
+  StorageBooking createBooking(@RequestBody StorageBooking booking);
 
   @PutMapping("/bookings-storage/bookings/{id}")
-  void updateBooking(@PathVariable UUID id, @RequestBody BookingRequest booking);
+  void updateBooking(@PathVariable UUID id, @RequestBody StorageBooking booking);
 
   @DeleteMapping("/bookings-storage/bookings/{id}")
   void deleteBooking(@PathVariable UUID id);

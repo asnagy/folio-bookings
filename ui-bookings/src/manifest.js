@@ -32,7 +32,9 @@ export const BOOKINGS_RESOURCE = {
         const filterCql = filters ? filters2cql(FILTER_CONFIG, filters) : '';
         if (filterCql) parts.push(filterCql);
         const cql = parts.length ? parts.join(' AND ') : 'cql.allRecords=1';
-        return sort ? `${cql} sortby ${sort}` : cql;
+        // Stripes sorts as "field" or "-field"; CQL wants "field/sort.descending"
+        const cqlSort = sort && (sort.startsWith('-') ? `${sort.slice(1)}/sort.descending` : sort);
+        return cqlSort ? `${cql} sortby ${cqlSort}` : cql;
       },
     },
   },

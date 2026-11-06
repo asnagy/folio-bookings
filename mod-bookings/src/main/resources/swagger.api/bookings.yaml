@@ -277,6 +277,11 @@ components:
           type: string
           format: uuid
           description: UUID of the service point where items will be checked out
+        items:
+          type: array
+          description: Items in this booking. On create and update the list replaces the stored items.
+          items:
+            $ref: '#/components/schemas/BookingItem'
         metadata:
           $ref: '#/components/schemas/Metadata'
 
@@ -294,7 +299,6 @@ components:
       type: object
       description: Association between a booking and an inventory item
       required:
-        - bookingId
         - itemId
       properties:
         id:
@@ -325,6 +329,9 @@ components:
         callNumber:
           type: string
           description: Call number of the item (denormalized for display)
+        itemStatus:
+          type: string
+          description: Inventory item status at the time of booking (denormalized for display)
         recallStatus:
           type: string
           description: Recall status for this specific item
