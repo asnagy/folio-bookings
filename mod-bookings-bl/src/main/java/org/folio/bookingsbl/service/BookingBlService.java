@@ -83,7 +83,7 @@ public class BookingBlService {
         if (!Boolean.TRUE.equals(request.getOverrideAvailability())) {
           // Item is on loan — trigger a recall automatically
           log.info("createBooking:: item {} is checked out, triggering recall", itemId);
-          triggerRecallForItem(itemId, summary);
+          triggerRecallForItem(item, request, summary);
           anyRecallTriggered = true;
         } else {
           log.info("createBooking:: item {} is checked out but override-availability flag set", itemId);
@@ -196,22 +196,20 @@ public class BookingBlService {
   // Private helpers
   // -------------------------------------------------------------------------
 
-  private void triggerRecallForItem(UUID itemId, BookingItemSummary summary) {
+  private void triggerRecallForItem(InventoryClient.ItemDto item, BookingRequest request, BookingItemSummary summary) {
+    var itemId = item.getId();
     try {
-      // Find the open loan for this item
-      String query = String.format("itemId==%s AND status.name==%s", itemId, LOAN_STATUS_OPEN);
-      var loans = loanStorageClient.getLoans(query, 0, 1);
-
-      if (loans != null && loans.getLoans() != null && !loans.getLoans().isEmpty()) {
-        var loanId = UUID.fromString(loans.getLoans().get(0).getId());
-        circulationClient.recallLoan(loanId);
-        summary.setRecallStatus(BookingItemSummary.RecallStatusEnum.TRIGGERED);
-        log.info("triggerRecallForItem:: recall triggered for loanId={} itemId={}", loanId, itemId);
-      } else {
-        // No open loan found despite "Checked out" status — flag as required
-        summary.setRecallStatus(BookingItemSummary.RecallStatusEnum.REQUIRED);
-        log.warn("triggerRecallForItem:: no open loan found for itemId={}, flagging REQUIRED", itemId);
-      }
+      var recall = new CirculationClient.RecallRequestDto();
+      recall.setItemId(itemId);
+      recall.setInstanceId(item.getInstanceId());
+      recall.setHoldingsRecordId(item.getHoldingsRecordId());
+      recall.setRequesterId(request.getUserId().toString());
+      recall.setPickupServicePointId(
+        request.getPickupServicePointId() != null ? request.getPickupServicePointId().toString() : null);
+      recall.setRequestDate(OffsetDateTime.now());
+      circulationClient.createRecallRequest(recall);
+      summary.setRecallStatus(BookingItemSummary.RecallStatusEnum.TRIGGERED);
+      log.info("triggerRecallForItem:: recall request created for itemId={}", itemId);
     } catch (Exception e) {
       // Recall failed — still allow booking, flag as REQUIRED for staff
       summary.setRecallStatus(BookingItemSummary.RecallStatusEnum.REQUIRED);

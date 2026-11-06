@@ -16,6 +16,8 @@ servers:
 paths:
   /bookings:
     get:
+      tags:
+        - bookings
       operationId: getBookings
       summary: Search and retrieve bookings with enriched data
       parameters:
@@ -36,6 +38,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     post:
+      tags:
+        - bookings
       operationId: createBooking
       summary: Create a new booking with full business logic
       description: >
@@ -69,6 +73,8 @@ paths:
 
   /bookings/{bookingId}:
     get:
+      tags:
+        - bookings
       operationId: getBookingById
       summary: Get a single booking with enriched patron and item details
       parameters:
@@ -87,6 +93,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     put:
+      tags:
+        - bookings
       operationId: updateBooking
       summary: Update an existing booking
       parameters:
@@ -115,6 +123,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     delete:
+      tags:
+        - bookings
       operationId: deleteBooking
       summary: Cancel and delete a booking
       parameters:
@@ -131,6 +141,8 @@ paths:
 
   /bookings/{bookingId}/activate:
     post:
+      tags:
+        - bookings
       operationId: activateBooking
       summary: Manually activate a booking (perform checkout for all items)
       description: >

@@ -37,12 +37,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.folio</groupId>
-      <artifactId>folio-spring-base</artifactId>
-      <version>${folio.spring.base.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
@@ -84,6 +78,18 @@
       <version>${mapstruct.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-okhttp</artifactId>
+      <version>13.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.openapitools</groupId>
+      <artifactId>jackson-databind-nullable</artifactId>
+      <version>0.2.6</version>
+    </dependency>
+
     <!-- Test -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -91,12 +97,6 @@
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>org.folio</groupId>
-      <artifactId>folio-spring-testing</artifactId>
-      <version>${folio.spring.base.version}</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <repositories>

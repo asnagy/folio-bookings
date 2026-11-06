@@ -3,11 +3,7 @@ package org.folio.bookings.controller;
 import lombok.RequiredArgsConstructor;
 import org.folio.bookings.domain.dto.Booking;
 import org.folio.bookings.domain.dto.BookingCollection;
-import org.folio.bookings.domain.dto.BookingItem;
-import org.folio.bookings.domain.dto.BookingItemCollection;
 import org.folio.bookings.rest.resource.BookingsApi;
-import org.folio.bookings.rest.resource.BookingItemsApi;
-import org.folio.bookings.service.BookingItemService;
 import org.folio.bookings.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +15,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/bookings-storage")
 @RequiredArgsConstructor
-public class BookingController implements BookingsApi, BookingItemsApi {
+public class BookingController implements BookingsApi {
 
   private final BookingService bookingService;
-  private final BookingItemService bookingItemService;
 
   // --- Bookings ---
 
@@ -51,25 +46,6 @@ public class BookingController implements BookingsApi, BookingItemsApi {
   @Override
   public ResponseEntity<Void> deleteBooking(UUID bookingId) {
     bookingService.deleteBooking(bookingId);
-    return ResponseEntity.noContent().build();
-  }
-
-  // --- Booking Items ---
-
-  @Override
-  public ResponseEntity<BookingItemCollection> getBookingItems(String query, Integer offset, Integer limit) {
-    return ResponseEntity.ok(bookingItemService.getBookingItems(query, offset, limit));
-  }
-
-  @Override
-  public ResponseEntity<BookingItem> createBookingItem(BookingItem bookingItem) {
-    var created = bookingItemService.createBookingItem(bookingItem);
-    return ResponseEntity.status(HttpStatus.CREATED).body(created);
-  }
-
-  @Override
-  public ResponseEntity<Void> deleteBookingItem(UUID bookingItemId) {
-    bookingItemService.deleteBookingItem(bookingItemId);
     return ResponseEntity.noContent().build();
   }
 }

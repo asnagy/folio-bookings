@@ -25,13 +25,26 @@ public interface CirculationClient {
   CheckoutResponseDto checkOutByBarcode(@RequestBody CheckoutRequestDto request);
 
   /**
-   * Trigger a recall on an existing loan.
-   * The loanId is obtained by querying loan-storage for the item.
+   * Create a Recall request on an item. In FOLIO a recall is a request of type "Recall";
+   * mod-circulation then shortens the due date of the open loan.
    */
-  @PostMapping("/circulation/loans/{loanId}/recall")
-  RecallResponseDto recallLoan(@PathVariable UUID loanId);
+  @PostMapping("/circulation/requests")
+  RecallResponseDto createRecallRequest(@RequestBody RecallRequestDto request);
 
   // ---- inner DTOs ----
+
+  @Data
+  class RecallRequestDto {
+    private String requestType = "Recall";
+    private String requestLevel = "Item";
+    private String fulfillmentPreference = "Hold Shelf";
+    private String itemId;
+    private String instanceId;
+    private String holdingsRecordId;
+    private String requesterId;
+    private String pickupServicePointId;
+    private OffsetDateTime requestDate;
+  }
 
   @Data
   class CheckoutRequestDto {

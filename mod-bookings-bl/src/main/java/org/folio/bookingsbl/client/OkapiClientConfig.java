@@ -1,30 +1,33 @@
 package org.folio.bookingsbl.client;
 
 import feign.RequestInterceptor;
-import lombok.RequiredArgsConstructor;
-import org.folio.spring.FolioExecutionContext;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.util.Collections;
 
 /**
- * Feign client configuration that propagates Okapi headers
- * (X-Okapi-Tenant, X-Okapi-Token, X-Okapi-Url) on every outbound
- * cross-module call, as required by the FOLIO platform.
+ * Feign client configuration that propagates the incoming X-Okapi-* headers
+ * (tenant, token, user id, request id, ...) on every outbound cross-module call,
+ * as required by the FOLIO platform. This module has no database, so it reads the
+ * headers directly from the current HTTP request instead of folio-spring-base.
  */
-@RequiredArgsConstructor
 public class OkapiClientConfig {
-
-  private final FolioExecutionContext folioExecutionContext;
 
   @Bean
   public RequestInterceptor okapiHeadersInterceptor() {
     return requestTemplate -> {
-      var headers = folioExecutionContext.getAllHeaders();
-      if (headers != null) {
-        headers.forEach((name, values) -> {
-          if (name != null && name.toLowerCase().startsWith("x-okapi-")) {
-            values.forEach(value -> requestTemplate.header(name, value));
-          }
-        });
+      var attributes = RequestContextHolder.getRequestAttributes();
+      if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
+        return;
+      }
+      HttpServletRequest request = servletAttributes.getRequest();
+      for (String name : Collections.list(request.getHeaderNames())) {
+        if (name.toLowerCase().startsWith("x-okapi-")) {
+          requestTemplate.header(name, Collections.list(request.getHeaders(name)));
+        }
       }
     };
   }

@@ -3,7 +3,7 @@ package org.folio.bookings.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.folio.spring.domain.model.AuditableEntity;
+
 
 import java.util.UUID;
 

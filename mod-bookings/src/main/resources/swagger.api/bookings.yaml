@@ -13,6 +13,8 @@ servers:
 paths:
   /bookings:
     get:
+      tags:
+        - bookings
       operationId: getBookings
       summary: Get a list of bookings
       description: Returns a list of booking records, supports CQL queries
@@ -34,6 +36,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     post:
+      tags:
+        - bookings
       operationId: createBooking
       summary: Create a new booking
       requestBody:
@@ -60,6 +64,8 @@ paths:
 
   /bookings/{bookingId}:
     get:
+      tags:
+        - bookings
       operationId: getBookingById
       summary: Get a booking by ID
       parameters:
@@ -78,6 +84,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     put:
+      tags:
+        - bookings
       operationId: updateBooking
       summary: Update a booking
       parameters:
@@ -102,6 +110,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     delete:
+      tags:
+        - bookings
       operationId: deleteBooking
       summary: Delete a booking
       parameters:
@@ -118,6 +128,8 @@ paths:
 
   /booking-items:
     get:
+      tags:
+        - bookingItems
       operationId: getBookingItems
       summary: Get booking-item associations
       parameters:
@@ -138,6 +150,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
     post:
+      tags:
+        - bookingItems
       operationId: createBookingItem
       summary: Associate an item with a booking
       requestBody:
@@ -164,6 +178,8 @@ paths:
 
   /booking-items/{bookingItemId}:
     delete:
+      tags:
+        - bookingItems
       operationId: deleteBookingItem
       summary: Remove an item from a booking
       parameters:
