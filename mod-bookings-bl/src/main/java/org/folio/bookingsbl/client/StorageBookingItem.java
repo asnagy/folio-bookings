@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /** Booked item as stored by mod-bookings. */
@@ -19,6 +20,6 @@ public class StorageBookingItem {
   private String itemBarcode;
   private String itemTitle;
   private String callNumber;
-  private String itemStatus;
+  private OffsetDateTime checkedOutDate;
   private String recallStatus = "NOT_REQUIRED";
 }

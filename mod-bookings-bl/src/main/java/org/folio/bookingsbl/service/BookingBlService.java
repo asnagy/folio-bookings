@@ -50,9 +50,10 @@ public class BookingBlService {
     log.debug("getBookings:: query={} offset={} limit={}", query, offset, limit);
     var raw = storageClient.getBookings(translateQuery(query), offset, limit);
     var patrons = fetchPatrons(raw.getBookings().stream().map(StorageBooking::getUserId).collect(Collectors.toSet()));
+    var statuses = fetchLiveItemStatuses(raw.getBookings());
     var result = new BookingCollection();
     result.setBookings(raw.getBookings().stream()
-      .map(b -> toResponse(b, patrons.get(b.getUserId())))
+      .map(b -> toResponse(b, patrons.get(b.getUserId()), statuses))
       .collect(Collectors.toList()));
     result.setTotalRecords(raw.getTotalRecords());
     return result;
@@ -171,7 +172,8 @@ public class BookingBlService {
         throw new BookingBlException("Item not found in inventory: " + itemId);
       }
       var booked = toStorageItem(item);
-      if (ITEM_STATUS_CHECKED_OUT.equals(booked.getItemStatus())) {
+      // Live status is used only to decide on recall now; it is never stored
+      if (item.getStatus() != null && ITEM_STATUS_CHECKED_OUT.equals(item.getStatus().getName())) {
         if (Boolean.TRUE.equals(request.getOverrideAvailability())) {
           log.info("resolveItems:: item {} is checked out but override-availability is set", itemId);
         } else {
@@ -188,8 +190,8 @@ public class BookingBlService {
     booked.setItemId(UUID.fromString(item.getId()));
     booked.setItemBarcode(item.getBarcode());
     booked.setItemTitle(item.getTitle());
-    booked.setCallNumber(item.getCallNumber());
-    booked.setItemStatus(item.getStatus() != null ? item.getStatus().getName() : null);
+    booked.setCallNumber(item.getEffectiveCallNumberComponents() != null
+      ? item.getEffectiveCallNumberComponents().getCallNumber() : item.getCallNumber());
     if (item.getInstanceId() != null) {
       booked.setInstanceId(UUID.fromString(item.getInstanceId()));
     }
@@ -236,7 +238,7 @@ public class BookingBlService {
     boolean allCheckedOut = true;
     for (var item : booking.getItems()) {
       // Already checked out by this booking on an earlier attempt
-      if (ITEM_STATUS_CHECKED_OUT.equals(item.getItemStatus()) && "NOT_REQUIRED".equals(item.getRecallStatus())) {
+      if (item.getCheckedOutDate() != null) {
         continue;
       }
       try {
@@ -247,8 +249,10 @@ public class BookingBlService {
         checkout.setServicePointId(
           booking.getPickupServicePointId() != null ? booking.getPickupServicePointId().toString() : null);
         circulationClient.checkOutByBarcode(checkout);
-        item.setItemStatus(ITEM_STATUS_CHECKED_OUT);
-        item.setRecallStatus("NOT_REQUIRED");
+        item.setCheckedOutDate(OffsetDateTime.now());
+        if (!"NOT_REQUIRED".equals(item.getRecallStatus())) {
+          item.setRecallStatus("RETURNED");
+        }
         log.info("performCheckoutsForBooking:: checked out itemBarcode={} for bookingId={}",
           item.getItemBarcode(), booking.getId());
       } catch (Exception e) {
@@ -364,10 +368,36 @@ public class BookingBlService {
   }
 
   private BookingResponse toResponse(StorageBooking booking) {
-    return toResponse(booking, fetchPatrons(List.of(booking.getUserId())).get(booking.getUserId()));
+    return toResponse(booking, fetchPatrons(List.of(booking.getUserId())).get(booking.getUserId()),
+      fetchLiveItemStatuses(List.of(booking)));
   }
 
-  private BookingResponse toResponse(StorageBooking b, PatronSummary patron) {
+  /** Current item statuses from Inventory (one batched call); empty if Inventory cannot be reached. */
+  private Map<UUID, String> fetchLiveItemStatuses(Collection<StorageBooking> bookings) {
+    var itemIds = bookings.stream().flatMap(b -> b.getItems().stream())
+      .map(StorageBookingItem::getItemId).filter(Objects::nonNull).distinct()
+      .collect(Collectors.toList());
+    var statuses = new HashMap<UUID, String>();
+    for (int from = 0; from < itemIds.size(); from += 50) {
+      var chunk = itemIds.subList(from, Math.min(from + 50, itemIds.size()));
+      try {
+        var query = "id==(" + chunk.stream().map(id -> "\"" + id + "\"").collect(Collectors.joining(" or ")) + ")";
+        var found = inventoryClient.getItems(query, chunk.size());
+        if (found != null && found.getItems() != null) {
+          for (var item : found.getItems()) {
+            if (item.getStatus() != null) {
+              statuses.put(UUID.fromString(item.getId()), item.getStatus().getName());
+            }
+          }
+        }
+      } catch (Exception e) {
+        log.warn("fetchLiveItemStatuses:: could not load item statuses: {}", e.getMessage());
+      }
+    }
+    return statuses;
+  }
+
+  private BookingResponse toResponse(StorageBooking b, PatronSummary patron, Map<UUID, String> itemStatuses) {
     var response = new BookingResponse();
     response.setId(b.getId());
     response.setUserId(b.getUserId());
@@ -379,7 +409,7 @@ public class BookingBlService {
     }
     response.setNotes(b.getNotes());
     response.setPickupServicePointId(b.getPickupServicePointId());
-    response.setItems(b.getItems().stream().map(BookingBlService::toSummary).collect(Collectors.toList()));
+    response.setItems(b.getItems().stream().map(i -> toSummary(i, itemStatuses.get(i.getItemId()))).collect(Collectors.toList()));
     if (b.getMetadata() != null) {
       var metadata = new Metadata();
       metadata.setCreatedDate(b.getMetadata().getCreatedDate());
@@ -391,14 +421,14 @@ public class BookingBlService {
     return response;
   }
 
-  private static BookingItemSummary toSummary(StorageBookingItem i) {
+  private static BookingItemSummary toSummary(StorageBookingItem i, String liveItemStatus) {
     var summary = new BookingItemSummary();
     summary.setId(i.getId());
     summary.setItemId(i.getItemId());
     summary.setItemBarcode(i.getItemBarcode());
     summary.setItemTitle(i.getItemTitle());
     summary.setCallNumber(i.getCallNumber());
-    summary.setItemStatus(i.getItemStatus());
+    summary.setItemStatus(liveItemStatus);
     if (i.getRecallStatus() != null) {
       summary.setRecallStatus(BookingItemSummary.RecallStatusEnum.fromValue(i.getRecallStatus()));
     }

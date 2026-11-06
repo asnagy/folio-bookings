@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -44,8 +45,8 @@ public class BookingItemEntity extends AuditableEntity {
   @Column(name = "call_number", length = 256)
   private String callNumber;
 
-  @Column(name = "item_status", length = 64)
-  private String itemStatus;
+  @Column(name = "checked_out_date")
+  private OffsetDateTime checkedOutDate;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "recall_status", nullable = false, length = 32)

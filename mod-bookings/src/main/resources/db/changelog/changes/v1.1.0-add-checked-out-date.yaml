@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: v1.1.0-add-checked-out-date
+      author: folio-bookings
+      comment: When this booking checked the item out (null until then)
+      changes:
+        - addColumn:
+            tableName: booking_items
+            columns:
+              - column:
+                  name: checked_out_date
+                  type: timestamp with time zone

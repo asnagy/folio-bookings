@@ -21,6 +21,10 @@ public interface InventoryClient {
   @GetMapping("/inventory/items")
   ItemsCollection getItemsByBarcode(@RequestParam String query);
 
+  /** Batch lookup, used to show live item status. */
+  @GetMapping("/inventory/items")
+  ItemsCollection getItems(@RequestParam("query") String query, @RequestParam("limit") int limit);
+
   // ---- inner DTOs ----
 
   @Data
@@ -31,9 +35,16 @@ public interface InventoryClient {
     private String title;
     private StatusDto status;
     private String callNumber;
+    private CallNumberDto effectiveCallNumberComponents;
     private String effectiveLocationId;
     private String holdingsRecordId;
     private String instanceId;
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class CallNumberDto {
+      private String callNumber;
+    }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

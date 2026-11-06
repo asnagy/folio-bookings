@@ -6,5 +6,5 @@ databaseChangeLog:
       file: db/changelog/changes/v1.0.0-create-booking-items-table.yaml
       relativeToChangelogFile: false
   - include:
-      file: db/changelog/changes/v1.1.0-add-item-status.yaml
+      file: db/changelog/changes/v1.1.0-add-checked-out-date.yaml
       relativeToChangelogFile: false

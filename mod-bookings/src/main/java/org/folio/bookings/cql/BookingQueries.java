@@ -36,7 +36,6 @@ public final class BookingQueries {
     Map.entry("itemBarcode", CqlField.of("itemBarcode", String.class)),
     Map.entry("itemTitle", CqlField.of("itemTitle", String.class)),
     Map.entry("callNumber", CqlField.of("callNumber", String.class)),
-    Map.entry("itemStatus", CqlField.of("itemStatus", String.class)),
     Map.entry("recallStatus", CqlField.of("recallStatus", BookingItemEntity.RecallStatus.class)),
     Map.entry("userId", CqlField.of("booking.userId", UUID.class)),
     Map.entry("status", CqlField.of("booking.status", BookingEntity.BookingStatus.class)),
@@ -45,7 +44,7 @@ public final class BookingQueries {
 
   private static final Map<String, String> ITEM_SORT = Map.of(
     "itemBarcode", "itemBarcode", "itemTitle", "itemTitle", "callNumber", "callNumber",
-    "itemStatus", "itemStatus", "recallStatus", "recallStatus",
+    "recallStatus", "recallStatus",
     "startDate", "booking.startDate", "endDate", "booking.endDate", "status", "booking.status");
 
   private BookingQueries() {

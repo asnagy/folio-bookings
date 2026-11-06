@@ -329,9 +329,10 @@ components:
         callNumber:
           type: string
           description: Call number of the item (denormalized for display)
-        itemStatus:
+        checkedOutDate:
           type: string
-          description: Inventory item status at the time of booking (denormalized for display)
+          format: date-time
+          description: When this booking checked the item out; empty until then. Live item status is not stored.
         recallStatus:
           type: string
           description: Recall status for this specific item
