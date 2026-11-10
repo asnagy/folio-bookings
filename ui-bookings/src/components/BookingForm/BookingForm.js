@@ -477,7 +477,7 @@ const BookingForm = (props) => {
               >
                 {/* Barcode entry row */}
                 <Row>
-                  <Col xs={8}>
+                  <Col xs={12}>
                     <TextField
                       id="item-barcode-field"
                       label={<FormattedMessage id="ui-bookings.item.barcodeEntry" />}
@@ -502,20 +502,24 @@ const BookingForm = (props) => {
                       }
                     />
                   </Col>
-                  <Col xs={4} style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '1rem' }}>
+                </Row>
+                <Row>
+                  <Col xs={12}>
                     {/*
-                     * Instance lookup plugin — matches the "Title look-up" pattern
-                     * from ui-requests. Uses ui-plugin-find-instance which provides
-                     * a full Inventory search modal.
+                     * Instance lookup plugin — the "Title look-up" pattern from ui-requests,
+                     * rendered as a link under the barcode field.
                      */}
                     <Pluggable
+                      aria-haspopup="true"
                       type="find-instance"
                       id="clickable-find-instance"
                       searchLabel={<FormattedMessage id="ui-bookings.item.lookUp" />}
+                      searchButtonStyle="link"
+                      marginTop0
                       selectInstance={(instance) => onSelectInstance(instance, values.items || [], form)}
                       dataKey="instances"
                     >
-                      <Button id="clickable-find-instance-fallback">
+                      <Button buttonStyle="link" id="clickable-find-instance-fallback">
                         <FormattedMessage id="ui-bookings.item.lookUp" />
                       </Button>
                     </Pluggable>

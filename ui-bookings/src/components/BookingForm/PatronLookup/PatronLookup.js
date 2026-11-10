@@ -103,7 +103,7 @@ const PatronLookup = ({ patron, onSelectPatron }) => {
   return (
     <>
       <Row>
-        <Col xs={8}>
+        <Col xs={12}>
           <TextField
             id="patron-barcode-field"
             label={<FormattedMessage id="ui-bookings.patron.barcodeEntry" />}
@@ -131,19 +131,24 @@ const PatronLookup = ({ patron, onSelectPatron }) => {
             }
           />
         </Col>
-        <Col xs={4} style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '1rem' }}>
+      </Row>
+      <Row>
+        <Col xs={12}>
           {/*
-           * find-user plugin — opens a patron search modal identical to
-           * the one used in ui-requests and ui-checkout.
+           * find-user plugin — opens the same patron search modal as ui-requests and ui-checkout.
+           * Rendered as a link under the barcode field, as in the Requests app.
            */}
           <Pluggable
+            aria-haspopup="true"
             type="find-user"
             id="clickable-find-user"
             searchLabel={<FormattedMessage id="ui-bookings.patron.lookUp" />}
+            searchButtonStyle="link"
+            marginTop0
             selectUser={onSelectPatron}
             visibleColumns={['active', 'name', 'patronGroup', 'username', 'barcode']}
           >
-            <Button id="clickable-find-user-fallback">
+            <Button buttonStyle="link" id="clickable-find-user-fallback">
               <FormattedMessage id="ui-bookings.patron.lookUp" />
             </Button>
           </Pluggable>
