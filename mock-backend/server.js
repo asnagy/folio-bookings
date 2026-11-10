@@ -132,6 +132,8 @@ const listBookings = (cql = '') => {
     const wanted = [...st[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     rows = rows.filter((b) => wanted.includes(b.status));
   }
+  const ev = cql.match(/eventId=="?([0-9a-f-]{36})"?/);
+  if (ev) rows = rows.filter((b) => b.eventId === ev[1]);
   if (/recallRequired=="true"/.test(cql)) rows = rows.filter(hasRecall);
   const sort = cql.match(/sortby\s+(\S+)(?:\/sort\.(ascending|descending))?/);
   if (sort) {

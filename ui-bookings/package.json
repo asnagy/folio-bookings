@@ -89,6 +89,16 @@
           "bookings.bookings.override-availability"
         ],
         "visible": true
+      },
+      {
+        "permissionName": "ui-bookings.events.manage",
+        "displayName": "Bookings: Manage events",
+        "description": "Create, edit and delete events that bookings can be linked to",
+        "subPermissions": [
+          "ui-bookings.view",
+          "bookings.events.manage"
+        ],
+        "visible": true
       }
     ]
   },

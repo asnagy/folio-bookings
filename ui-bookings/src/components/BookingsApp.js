@@ -19,6 +19,7 @@ import { stripesConnect, useOkapiKy, useStripes } from '@folio/stripes/core';
 
 import BookingDetail from './BookingDetail/BookingDetail';
 import BookingForm from './BookingForm/BookingForm';
+import ViewSwitcher from './ViewSwitcher';
 import { BOOKINGS_RESOURCE, BOOKING_STATUSES } from '../manifest';
 import BookingRecallBadge from './BookingStatus/BookingRecallBadge';
 import BookingStatusBadge from './BookingStatus/BookingStatusBadge';
@@ -185,6 +186,10 @@ const BookingsApp = (props) => {
         defaultWidth="22%"
         paneTitle={<FormattedMessage id="ui-bookings.filters.title" />}
       >
+        <ViewSwitcher
+          active="bookings"
+          onChange={(view) => view === 'events' && history.push(`${match.path}/events`)}
+        />
         <form onSubmit={onSubmitSearch}>
           <SearchField
             id="bookings-search-field"
