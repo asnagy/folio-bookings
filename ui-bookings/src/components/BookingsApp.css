@@ -11,3 +11,16 @@
 .recallWarningBanner {
   margin-bottom: var(--gutter);
 }
+
+/* One item title per line inside the Items cell */
+.itemTitles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.itemTitles li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

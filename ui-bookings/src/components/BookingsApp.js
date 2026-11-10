@@ -27,16 +27,16 @@ import { formatDateTimeDisplay } from '../util/bookingUtils';
 import css from './BookingsApp.css';
 
 const COLUMN_WIDTHS = {
-  patronName:  '20%',
-  startDate:   '15%',
-  endDate:     '15%',
-  status:      '13%',
-  recall:      '12%',
-  itemCount:   '8%',
-  notes:       '17%',
+  patronName:  '16%',
+  items:       '24%',
+  startDate:   '12%',
+  endDate:     '12%',
+  status:      '12%',
+  recall:      '10%',
+  notes:       '14%',
 };
 
-const COLUMN_NAMES = ['patronName', 'startDate', 'endDate', 'status', 'recall', 'itemCount', 'notes'];
+const COLUMN_NAMES = ['patronName', 'items', 'startDate', 'endDate', 'status', 'recall', 'notes'];
 
 /**
  * BookingsApp
@@ -104,7 +104,15 @@ const BookingsApp = (props) => {
       const triggered = (row.items || []).every(i => i.recallStatus !== 'REQUIRED');
       return <BookingRecallBadge status={triggered ? 'TRIGGERED' : 'REQUIRED'} />;
     },
-    itemCount: (row) => (row.items ? row.items.length : '—'),
+    items:     (row) => {
+      const titles = (row.items || []).map(i => i.itemTitle || i.itemBarcode).filter(Boolean);
+      if (!titles.length) return '—';
+      return (
+        <ul className={css.itemTitles}>
+          {titles.map((title, index) => <li key={`${title}-${index}`}>{title}</li>)}
+        </ul>
+      );
+    },
     notes:     (row) => row.notes || '—',
   };
 
@@ -114,7 +122,7 @@ const BookingsApp = (props) => {
     endDate:    <FormattedMessage id="ui-bookings.booking.endDate" />,
     status:     <FormattedMessage id="ui-bookings.booking.status" />,
     recall:     <FormattedMessage id="ui-bookings.booking.recall" />,
-    itemCount:  <FormattedMessage id="ui-bookings.booking.itemCount" />,
+    items:      <FormattedMessage id="ui-bookings.booking.itemCount" />,
     notes:      <FormattedMessage id="ui-bookings.booking.notes" />,
   };
 
@@ -254,8 +262,6 @@ const BookingsApp = (props) => {
               : <FormattedMessage id="ui-bookings.noResults" />
           }
           totalCount={totalRecords}
-          autosize
-          virtualize
         />
       </Pane>
     );
