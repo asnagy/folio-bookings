@@ -328,6 +328,9 @@ public final class CqlQuery {
         if (type == UUID.class) {
           return UUID.fromString(raw);
         }
+        if (type == Boolean.class) {
+          return Boolean.parseBoolean(raw);
+        }
         if (type == OffsetDateTime.class) {
           return OffsetDateTime.parse(raw);
         }

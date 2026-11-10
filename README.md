@@ -25,6 +25,10 @@ This repository contains all three modules that make up the app:
 
 - Create a booking for one or more inventory items assigned to a patron
 - Patron lookup via barcode entry **or** `find-user` plugin modal
+- **Delivery or pickup** per booking: a delivered booking carries a free-text delivery location;
+  otherwise a pickup service point is required. An optional "pick up by" user can be recorded
+- **Events**: bookings can be linked to a named event (name, description, dates; stored in `mod-bookings`,
+  exposed at `/bookings/events`)
 - Item lookup via barcode scan/entry **or** "Title look-up" (`find-instance` plugin)
 - Automatic **recall triggering** when a booked item is currently on loan:
   - Recall is sent to `mod-circulation` immediately on booking creation

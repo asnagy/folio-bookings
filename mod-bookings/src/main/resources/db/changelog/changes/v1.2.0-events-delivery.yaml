@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: v1.2.0-create-events-table
+      author: folio-bookings
+      comment: Events that bookings can be made for
+      changes:
+        - createTable:
+            tableName: events
+            columns:
+              - column: {name: id, type: uuid, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: name, type: varchar(255), constraints: {nullable: false}}
+              - column: {name: description, type: varchar(2000)}
+              - column: {name: start_date, type: timestamptz}
+              - column: {name: end_date, type: timestamptz}
+              - column: {name: created_date, type: timestamptz, constraints: {nullable: false}}
+              - column: {name: created_by_user_id, type: uuid}
+              - column: {name: updated_date, type: timestamptz}
+              - column: {name: updated_by_user_id, type: uuid}
+  - changeSet:
+      id: v1.2.0-booking-delivery-event
+      author: folio-bookings
+      comment: Delivery vs pickup, pick-up-by user and event on bookings
+      changes:
+        - addColumn:
+            tableName: bookings
+            columns:
+              - column: {name: delivered, type: boolean, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: delivery_location, type: varchar(500)}
+              - column: {name: pickup_by_user_id, type: uuid}
+              - column: {name: event_id, type: uuid}
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_event_id
+            columns:
+              - column: {name: event_id}

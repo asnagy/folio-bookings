@@ -7,35 +7,106 @@
       "version": "1.0",
       "handlers": [
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/bookings/bookings",
-          "permissionsRequired": ["bookings.bookings.collection.get"]
+          "permissionsRequired": [
+            "bookings.bookings.collection.get"
+          ]
         },
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/bookings/bookings",
-          "permissionsRequired": ["bookings.bookings.item.post"]
+          "permissionsRequired": [
+            "bookings.bookings.item.post"
+          ]
         },
         {
-          "methods": ["GET"],
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/bookings/bookings/{bookingId}",
-          "permissionsRequired": ["bookings.bookings.item.get"]
+          "permissionsRequired": [
+            "bookings.bookings.item.get"
+          ]
         },
         {
-          "methods": ["PUT"],
+          "methods": [
+            "PUT"
+          ],
           "pathPattern": "/bookings/bookings/{bookingId}",
-          "permissionsRequired": ["bookings.bookings.item.put"]
+          "permissionsRequired": [
+            "bookings.bookings.item.put"
+          ]
         },
         {
-          "methods": ["DELETE"],
+          "methods": [
+            "DELETE"
+          ],
           "pathPattern": "/bookings/bookings/{bookingId}",
-          "permissionsRequired": ["bookings.bookings.item.delete"]
+          "permissionsRequired": [
+            "bookings.bookings.item.delete"
+          ]
         },
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/bookings/bookings/{bookingId}/activate",
-          "permissionsRequired": ["bookings.bookings.item.activate"],
-          "permissionsDesired": ["bookings.override-availability"]
+          "permissionsRequired": [
+            "bookings.bookings.item.activate"
+          ],
+          "permissionsDesired": [
+            "bookings.override-availability"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/bookings/events",
+          "permissionsRequired": [
+            "bookings.events.collection.get"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/bookings/events/{eventId}",
+          "permissionsRequired": [
+            "bookings.events.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/bookings/events",
+          "permissionsRequired": [
+            "bookings.events.item.post"
+          ]
+        },
+        {
+          "methods": [
+            "PUT"
+          ],
+          "pathPattern": "/bookings/events/{eventId}",
+          "permissionsRequired": [
+            "bookings.events.item.put"
+          ]
+        },
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "pathPattern": "/bookings/events/{eventId}",
+          "permissionsRequired": [
+            "bookings.events.item.delete"
+          ]
         }
       ]
     },
@@ -44,8 +115,19 @@
       "version": "2.0",
       "interfaceType": "system",
       "handlers": [
-        { "methods": ["POST"], "pathPattern": "/_/tenant" },
-        { "methods": ["GET", "DELETE"], "pathPattern": "/_/tenant/{id}" }
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/_/tenant"
+        },
+        {
+          "methods": [
+            "GET",
+            "DELETE"
+          ],
+          "pathPattern": "/_/tenant/{id}"
+        }
       ]
     },
     {
@@ -54,7 +136,9 @@
       "interfaceType": "system",
       "handlers": [
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/bookings/scheduled/checkout",
           "unit": "minute",
           "delay": "5",
@@ -64,11 +148,26 @@
     }
   ],
   "requires": [
-    { "id": "bookings-storage", "version": "1.0" },
-    { "id": "circulation",      "version": "9.0 10.0 11.0 12.0 13.0 14.0" },
-    { "id": "inventory",        "version": "10.0 11.0 12.0 13.0" },
-    { "id": "users",            "version": "16.1" },
-    { "id": "loan-storage",     "version": "7.0" }
+    {
+      "id": "bookings-storage",
+      "version": "1.0"
+    },
+    {
+      "id": "circulation",
+      "version": "9.0 10.0 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "inventory",
+      "version": "10.0 11.0 12.0 13.0"
+    },
+    {
+      "id": "users",
+      "version": "16.1"
+    },
+    {
+      "id": "loan-storage",
+      "version": "7.0"
+    }
   ],
   "permissionSets": [
     {
@@ -112,7 +211,8 @@
       "description": "View-only access to booking records",
       "subPermissions": [
         "bookings.bookings.collection.get",
-        "bookings.bookings.item.get"
+        "bookings.bookings.item.get",
+        "bookings.events.collection.get"
       ],
       "visible": true
     },
@@ -147,13 +247,52 @@
       "visible": true
     },
     {
+      "permissionName": "bookings.events.collection.get",
+      "displayName": "Bookings - list events",
+      "description": "List events"
+    },
+    {
+      "permissionName": "bookings.events.item.get",
+      "displayName": "Bookings - get an event",
+      "description": "Get an event"
+    },
+    {
+      "permissionName": "bookings.events.item.post",
+      "displayName": "Bookings - create an event",
+      "description": "Create an event"
+    },
+    {
+      "permissionName": "bookings.events.item.put",
+      "displayName": "Bookings - update an event",
+      "description": "Update an event"
+    },
+    {
+      "permissionName": "bookings.events.item.delete",
+      "displayName": "Bookings - delete an event",
+      "description": "Delete an event"
+    },
+    {
+      "permissionName": "bookings.events.manage",
+      "displayName": "Bookings: Manage events",
+      "description": "Create, edit and delete events used by bookings",
+      "subPermissions": [
+        "bookings.events.collection.get",
+        "bookings.events.item.get",
+        "bookings.events.item.post",
+        "bookings.events.item.put",
+        "bookings.events.item.delete"
+      ],
+      "visible": true
+    },
+    {
       "permissionName": "bookings.all",
       "displayName": "Bookings: All permissions",
       "description": "All permissions for the Bookings module",
       "subPermissions": [
         "bookings.bookings.create-edit",
         "bookings.bookings.delete",
-        "bookings.bookings.override-availability"
+        "bookings.bookings.override-availability",
+        "bookings.events.manage"
       ],
       "visible": true
     }
@@ -163,7 +302,13 @@
     "dockerPull": false,
     "dockerArgs": {
       "HostConfig": {
-        "PortBindings": { "8082/tcp": [{ "HostPort": "%p" }] },
+        "PortBindings": {
+          "8082/tcp": [
+            {
+              "HostPort": "%p"
+            }
+          ]
+        },
         "Memory": 536870912
       }
     },

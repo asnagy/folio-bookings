@@ -93,5 +93,15 @@
   "item.picker.title": "Select items — {title}",
   "item.picker.add": "{count, plural, =0 {Add items} one {Add # item} other {Add # items}}",
   "item.picker.alreadyAdded": "Already in this booking",
-  "item.added": "Added {title} ({barcode}) to the booking"
+  "item.added": "Added {title} ({barcode}) to the booking",
+  "booking.delivered": "Deliver items (rather than pick up at a service point)",
+  "booking.deliveryLocation": "Delivery location",
+  "booking.deliveryMethod": "Delivery method",
+  "booking.methodDelivered": "Delivered",
+  "booking.methodPickup": "Pickup",
+  "booking.pickupBy": "Pick up by",
+  "booking.pickupByLookUp": "Pick up by look-up",
+  "booking.pickupByClear": "Clear pick up by",
+  "booking.event": "Event",
+  "booking.selectEvent": "Select event"
 }

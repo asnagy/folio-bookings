@@ -71,6 +71,13 @@ public class BookingService {
       .orElseThrow(() -> new BookingNotFoundException(id));
     validateBookingDates(booking);
     bookingMapper.updateEntityFromDto(booking, existing);
+    // PUT replaces these optional fields: a null must clear the stored value, which the mapper ignores
+    existing.setDelivered(Boolean.TRUE.equals(booking.getDelivered()));
+    existing.setDeliveryLocation(booking.getDeliveryLocation());
+    existing.setPickupServicePointId(booking.getPickupServicePointId());
+    existing.setPickupByUserId(booking.getPickupByUserId());
+    existing.setEventId(booking.getEventId());
+    existing.setNotes(booking.getNotes());
     if (booking.getItems() != null) {
       replaceItems(existing, booking.getItems());
     }
@@ -100,7 +107,18 @@ public class BookingService {
     }
   }
 
+  private void validateDelivery(Booking booking) {
+    if (Boolean.TRUE.equals(booking.getDelivered())) {
+      if (booking.getDeliveryLocation() == null || booking.getDeliveryLocation().isBlank()) {
+        throw new BookingValidationException("deliveryLocation is required for a delivered booking");
+      }
+    } else if (booking.getPickupServicePointId() == null) {
+      throw new BookingValidationException("pickupServicePointId is required when the booking is not delivered");
+    }
+  }
+
   private void validateBookingDates(Booking booking) {
+    validateDelivery(booking);
     if (booking.getStartDate() != null && booking.getEndDate() != null) {
       if (!booking.getStartDate().isBefore(booking.getEndDate())) {
         throw new BookingValidationException("startDate must be before endDate");

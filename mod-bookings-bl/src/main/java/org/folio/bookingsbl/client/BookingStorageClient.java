@@ -29,4 +29,22 @@ public interface BookingStorageClient {
 
   @DeleteMapping("/bookings-storage/bookings/{id}")
   void deleteBooking(@PathVariable UUID id);
+
+  @GetMapping("/bookings-storage/events")
+  StorageEvent.Collection getEvents(
+    @RequestParam(required = false) String query,
+    @RequestParam(defaultValue = "0") int offset,
+    @RequestParam(defaultValue = "100") int limit);
+
+  @GetMapping("/bookings-storage/events/{id}")
+  StorageEvent getEvent(@PathVariable UUID id);
+
+  @PostMapping("/bookings-storage/events")
+  StorageEvent createEvent(@RequestBody StorageEvent event);
+
+  @PutMapping("/bookings-storage/events/{id}")
+  void updateEvent(@PathVariable UUID id, @RequestBody StorageEvent event);
+
+  @DeleteMapping("/bookings-storage/events/{id}")
+  void deleteEvent(@PathVariable UUID id);
 }

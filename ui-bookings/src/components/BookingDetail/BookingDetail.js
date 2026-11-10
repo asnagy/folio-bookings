@@ -89,6 +89,15 @@ const BookingDetail = (props) => {
       .catch(() => {});
   }, [booking?.pickupServicePointId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [pickupByName, setPickupByName] = useState(null);
+  useEffect(() => {
+    setPickupByName(null);
+    if (!booking?.pickupByUserId) return;
+    ky.get(`users/${booking.pickupByUserId}`).json()
+      .then(u => setPickupByName(`${u.personal?.lastName || ''}${u.personal?.firstName ? `, ${u.personal.firstName}` : ''}` || u.username))
+      .catch(() => {});
+  }, [booking?.pickupByUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleDelete = () => {
     setIsDeleting(true);
     ky.delete(`bookings/bookings/${bookingId}`)
@@ -247,9 +256,38 @@ const BookingDetail = (props) => {
                     />
                   </Col>
                   <Col xs={6}>
+                    {booking.delivered ? (
+                      <KeyValue
+                        label={<FormattedMessage id="ui-bookings.booking.deliveryLocation" />}
+                        value={booking.deliveryLocation || '—'}
+                      />
+                    ) : (
+                      <KeyValue
+                        label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
+                        value={servicePointName || booking.pickupServicePointId || '—'}
+                      />
+                    )}
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={6}>
                     <KeyValue
-                      label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
-                      value={servicePointName || booking.pickupServicePointId || '—'}
+                      label={<FormattedMessage id="ui-bookings.booking.deliveryMethod" />}
+                      value={<FormattedMessage id={booking.delivered ? 'ui-bookings.booking.methodDelivered' : 'ui-bookings.booking.methodPickup'} />}
+                    />
+                  </Col>
+                  <Col xs={6}>
+                    <KeyValue
+                      label={<FormattedMessage id="ui-bookings.booking.pickupBy" />}
+                      value={pickupByName || '—'}
+                    />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={12}>
+                    <KeyValue
+                      label={<FormattedMessage id="ui-bookings.booking.event" />}
+                      value={booking.eventName || '—'}
                     />
                   </Col>
                 </Row>

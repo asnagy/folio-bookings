@@ -27,6 +27,9 @@ import { Pluggable, useOkapiKy } from '@folio/stripes/core';
 import BookingItemsTable from '../BookingItemsTable';
 import PatronLookup from './PatronLookup/PatronLookup';
 import ItemSelectModal from './ItemSelectModal/ItemSelectModal';
+import PickupByLookup from './PickupByLookup/PickupByLookup';
+
+const userSummary = (u) => (u ? { id: u.id, barcode: u.barcode, firstName: u.personal?.firstName ?? u.firstName, lastName: u.personal?.lastName ?? u.lastName } : null);
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -89,12 +92,17 @@ const BookingForm = (props) => {
     userId: '',
     startDate: '',
     endDate: '',
+    delivered: false,
+    deliveryLocation: '',
     pickupServicePointId: '',
+    eventId: '',
     overrideAvailability: false,
     notes: '',
     items: [],
   });
   const [servicePoints, setServicePoints] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [pickupBy, setPickupBy] = useState(null);
   const canOverride = stripes.hasPerm('ui-bookings.override-availability');
   const [patron, setPatron]           = useState(null);
   const [isLoading, setIsLoading]     = useState(isEditing);
@@ -120,11 +128,19 @@ const BookingForm = (props) => {
           userId: data.userId || '',
           startDate: toLocalInput(data.startDate),
           endDate: toLocalInput(data.endDate),
+          delivered: Boolean(data.delivered),
+          deliveryLocation: data.deliveryLocation || '',
           pickupServicePointId: data.pickupServicePointId || '',
+          eventId: data.eventId || '',
           overrideAvailability: false,
           notes: data.notes || '',
           items: data.items || [],
         });
+        if (data.pickupByUserId) {
+          ky.get(`users/${data.pickupByUserId}`).json()
+            .then(u => setPickupBy(userSummary(u)))
+            .catch(() => setPickupBy({ id: data.pickupByUserId }));
+        }
         setPatron(normalisePatron(data.patron) || (data.userId ? { id: data.userId } : null));
         const checkedOut = (data.items || []).filter(i => i.itemStatus === 'Checked out');
         setCheckedOutItems(checkedOut);
@@ -140,6 +156,12 @@ const BookingForm = (props) => {
     ky.get('service-points', { searchParams: { query: 'pickupLocation==true sortby name', limit: 200 } }).json()
       .then(data => setServicePoints(data.servicepoints || []))
       .catch(() => setServicePoints([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    ky.get('bookings/events', { searchParams: { limit: 500 } }).json()
+      .then(data => setEvents(data.events || []))
+      .catch(() => setEvents([]));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------------
@@ -256,7 +278,11 @@ const BookingForm = (props) => {
       userId: patron?.id || values.userId,
       startDate: startDateTime,
       endDate: endDateTime,
-      pickupServicePointId: values.pickupServicePointId || undefined,
+      delivered: Boolean(values.delivered),
+      deliveryLocation: values.delivered ? (values.deliveryLocation || '').trim() : undefined,
+      pickupServicePointId: values.delivered ? undefined : (values.pickupServicePointId || undefined),
+      pickupByUserId: pickupBy?.id || undefined,
+      eventId: values.eventId || undefined,
       overrideAvailability: canOverride ? Boolean(values.overrideAvailability) : undefined,
       notes: values.notes || undefined,
       itemIds: (values.items || []).map(i => i.itemId),
@@ -275,7 +301,7 @@ const BookingForm = (props) => {
       } catch (e) { /* keep default message */ }
       setSubmitError(message);
     }
-  }, [patron, isEditing, bookingId, onSubmitSuccess, ky, canOverride]);
+  }, [patron, pickupBy, isEditing, bookingId, onSubmitSuccess, ky, canOverride]);
 
   // ------------------------------------------------------------------
   // Validation
@@ -298,6 +324,13 @@ const BookingForm = (props) => {
       if (start >= end) {
         errors.endDate = intl.formatMessage({ id: 'ui-bookings.validation.endAfterStart' });
       }
+    }
+    if (values.delivered) {
+      if (!values.deliveryLocation || !values.deliveryLocation.trim()) {
+        errors.deliveryLocation = intl.formatMessage({ id: 'ui-bookings.validation.required' });
+      }
+    } else if (!values.pickupServicePointId) {
+      errors.pickupServicePointId = intl.formatMessage({ id: 'ui-bookings.validation.required' });
     }
     if (!values.items || values.items.length === 0) {
       errors.items = intl.formatMessage({ id: 'ui-bookings.validation.itemsRequired' });
@@ -430,12 +463,51 @@ const BookingForm = (props) => {
                 <Row>
                   <Col xs={12}>
                     <Field
-                      name="pickupServicePointId"
-                      label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
+                      name="delivered"
+                      type="checkbox"
+                      label={<FormattedMessage id="ui-bookings.booking.delivered" />}
+                      component={Checkbox}
+                    />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={12}>
+                    {values.delivered ? (
+                      <Field
+                        name="deliveryLocation"
+                        label={<FormattedMessage id="ui-bookings.booking.deliveryLocation" />}
+                        component={TextField}
+                        maxLength={500}
+                        required
+                      />
+                    ) : (
+                      <Field
+                        name="pickupServicePointId"
+                        label={<FormattedMessage id="ui-bookings.booking.pickupServicePoint" />}
+                        component={Select}
+                        required
+                        dataOptions={[
+                          { value: '', label: intl.formatMessage({ id: 'ui-bookings.booking.selectServicePoint' }) },
+                          ...servicePoints.map(sp => ({ value: sp.id, label: sp.name })),
+                        ]}
+                      />
+                    )}
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={12}>
+                    <PickupByLookup user={pickupBy} onSelectUser={(u) => setPickupBy(userSummary(u))} />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={12}>
+                    <Field
+                      name="eventId"
+                      label={<FormattedMessage id="ui-bookings.booking.event" />}
                       component={Select}
                       dataOptions={[
-                        { value: '', label: intl.formatMessage({ id: 'ui-bookings.booking.selectServicePoint' }) },
-                        ...servicePoints.map(sp => ({ value: sp.id, label: sp.name })),
+                        { value: '', label: intl.formatMessage({ id: 'ui-bookings.booking.selectEvent' }) },
+                        ...events.map(ev => ({ value: ev.id, label: ev.name })),
                       ]}
                     />
                   </Col>

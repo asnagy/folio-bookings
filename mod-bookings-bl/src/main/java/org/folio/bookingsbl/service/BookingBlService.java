@@ -51,9 +51,10 @@ public class BookingBlService {
     var raw = storageClient.getBookings(translateQuery(query), offset, limit);
     var patrons = fetchPatrons(raw.getBookings().stream().map(StorageBooking::getUserId).collect(Collectors.toSet()));
     var statuses = fetchLiveItemStatuses(raw.getBookings());
+    var eventNames = fetchEventNames(raw.getBookings());
     var result = new BookingCollection();
     result.setBookings(raw.getBookings().stream()
-      .map(b -> toResponse(b, patrons.get(b.getUserId()), statuses))
+      .map(b -> toResponse(b, patrons.get(b.getUserId()), statuses, eventNames))
       .collect(Collectors.toList()));
     result.setTotalRecords(raw.getTotalRecords());
     return result;
@@ -287,7 +288,13 @@ public class BookingBlService {
     booking.setStartDate(request.getStartDate());
     booking.setEndDate(request.getEndDate());
     booking.setNotes(request.getNotes());
-    booking.setPickupServicePointId(request.getPickupServicePointId());
+    boolean delivered = Boolean.TRUE.equals(request.getDelivered());
+    booking.setDelivered(delivered);
+    // Delivered bookings carry a free-text location; otherwise a service point is used
+    booking.setDeliveryLocation(delivered ? request.getDeliveryLocation() : null);
+    booking.setPickupServicePointId(delivered ? null : request.getPickupServicePointId());
+    booking.setPickupByUserId(request.getPickupByUserId());
+    booking.setEventId(request.getEventId());
   }
 
   private StorageBooking loadBooking(UUID id) {
@@ -369,10 +376,28 @@ public class BookingBlService {
 
   private BookingResponse toResponse(StorageBooking booking) {
     return toResponse(booking, fetchPatrons(List.of(booking.getUserId())).get(booking.getUserId()),
-      fetchLiveItemStatuses(List.of(booking)));
+      fetchLiveItemStatuses(List.of(booking)), fetchEventNames(List.of(booking)));
   }
 
   /** Current item statuses from Inventory (one batched call); empty if Inventory cannot be reached. */
+  private Map<UUID, String> fetchEventNames(Collection<StorageBooking> bookings) {
+    var ids = bookings.stream().map(StorageBooking::getEventId).filter(java.util.Objects::nonNull)
+      .distinct().map(UUID::toString).collect(Collectors.toList());
+    Map<UUID, String> names = new java.util.HashMap<>();
+    if (ids.isEmpty()) {
+      return names;
+    }
+    try {
+      var events = storageClient.getEvents("id==(" + String.join(" or ", ids) + ")", 0, ids.size());
+      if (events != null && events.getEvents() != null) {
+        events.getEvents().forEach(e -> names.put(e.getId(), e.getName()));
+      }
+    } catch (Exception e) {
+      log.warn("fetchEventNames:: could not load events: {}", e.getMessage());
+    }
+    return names;
+  }
+
   private Map<UUID, String> fetchLiveItemStatuses(Collection<StorageBooking> bookings) {
     var itemIds = bookings.stream().flatMap(b -> b.getItems().stream())
       .map(StorageBookingItem::getItemId).filter(Objects::nonNull).distinct()
@@ -397,7 +422,8 @@ public class BookingBlService {
     return statuses;
   }
 
-  private BookingResponse toResponse(StorageBooking b, PatronSummary patron, Map<UUID, String> itemStatuses) {
+  private BookingResponse toResponse(StorageBooking b, PatronSummary patron, Map<UUID, String> itemStatuses,
+                                     Map<UUID, String> eventNames) {
     var response = new BookingResponse();
     response.setId(b.getId());
     response.setUserId(b.getUserId());
@@ -409,6 +435,11 @@ public class BookingBlService {
     }
     response.setNotes(b.getNotes());
     response.setPickupServicePointId(b.getPickupServicePointId());
+    response.setDelivered(Boolean.TRUE.equals(b.getDelivered()));
+    response.setDeliveryLocation(b.getDeliveryLocation());
+    response.setPickupByUserId(b.getPickupByUserId());
+    response.setEventId(b.getEventId());
+    response.setEventName(eventNames.get(b.getEventId()));
     response.setItems(b.getItems().stream().map(i -> toSummary(i, itemStatuses.get(i.getItemId()))).collect(Collectors.toList()));
     if (b.getMetadata() != null) {
       var metadata = new Metadata();
@@ -442,6 +473,13 @@ public class BookingBlService {
     }
     if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
       throw new BookingBlException("A booking must include at least one item");
+    }
+    if (Boolean.TRUE.equals(request.getDelivered())) {
+      if (request.getDeliveryLocation() == null || request.getDeliveryLocation().isBlank()) {
+        throw new BookingBlException("A delivery location is required for a delivered booking");
+      }
+    } else if (request.getPickupServicePointId() == null) {
+      throw new BookingBlException("A pickup service point is required when the booking is not delivered");
     }
   }
 }

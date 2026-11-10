@@ -17,6 +17,8 @@ import java.util.UUID;
 public interface BookingRepository extends JpaRepository<BookingEntity, UUID>,
   JpaSpecificationExecutor<BookingEntity> {
 
+  long countByEventId(UUID eventId);
+
   Page<BookingEntity> findByUserId(UUID userId, Pageable pageable);
 
   Page<BookingEntity> findByStatus(BookingEntity.BookingStatus status, Pageable pageable);

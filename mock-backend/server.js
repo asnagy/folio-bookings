@@ -28,6 +28,8 @@ const now = Date.now();
 const day = 86400000;
 const iso = (t) => new Date(t).toISOString();
 const bookings = new Map();
+const events = new Map();
+
 const seed = [
   { userId: 'seed-1', patron: { firstName: 'Ada', lastName: 'Lovelace', barcode: '1001', patronGroup: 'staff' }, start: now + day, end: now + 3 * day, status: 'PENDING', notes: 'Conference loan',
     items: [{ itemId: randomUUID(), itemBarcode: '39001', itemTitle: 'The Analytical Engine', callNumber: 'QA76 .L68', itemStatus: 'Available', recallStatus: 'NOT_REQUIRED' }] },
@@ -158,7 +160,9 @@ async function handleBookings(req, res, url) {
     const items = await buildItems(req, p.itemIds);
     const b = {
       id: randomUUID(), userId: p.userId, patron: await buildPatron(req, p.userId),
-      startDate: p.startDate, endDate: p.endDate, notes: p.notes, pickupServicePointId: p.pickupServicePointId,
+      startDate: p.startDate, endDate: p.endDate, notes: p.notes, pickupServicePointId: p.delivered ? undefined : p.pickupServicePointId,
+      delivered: Boolean(p.delivered), deliveryLocation: p.delivered ? p.deliveryLocation : undefined,
+      pickupByUserId: p.pickupByUserId, eventId: p.eventId, eventName: events.get(p.eventId)?.name,
       items, status: 'PENDING', metadata: { createdDate: iso(Date.now()), updatedDate: iso(Date.now()) },
     };
     b.status = deriveStatus(b);
@@ -175,7 +179,10 @@ async function handleBookings(req, res, url) {
     if (p.userId !== b.userId) { b.userId = p.userId; b.patron = await buildPatron(req, p.userId); }
     const keep = new Map(b.items.map((i) => [i.itemId, i]));
     b.items = await Promise.all((p.itemIds || []).map(async (iid) => keep.get(iid) || (await buildItems(req, [iid]))[0]));
-    Object.assign(b, { startDate: p.startDate, endDate: p.endDate, notes: p.notes, pickupServicePointId: p.pickupServicePointId });
+    Object.assign(b, { startDate: p.startDate, endDate: p.endDate, notes: p.notes,
+      pickupServicePointId: p.delivered ? undefined : p.pickupServicePointId,
+      delivered: Boolean(p.delivered), deliveryLocation: p.delivered ? p.deliveryLocation : undefined,
+      pickupByUserId: p.pickupByUserId, eventId: p.eventId, eventName: events.get(p.eventId)?.name });
     b.status = deriveStatus(b);
     b.metadata.updatedDate = iso(Date.now());
     return json(req, res, 204);
@@ -185,6 +192,34 @@ async function handleBookings(req, res, url) {
     b.items.forEach((i) => { i.itemStatus = 'Checked out'; });
     b.metadata.updatedDate = iso(Date.now());
     return json(req, res, 200, b);
+  }
+  return json(req, res, 404, { errors: [{ message: 'Not found' }] });
+}
+
+// ---------------------------------------------------------------- events API
+async function handleEvents(req, res, url) {
+  const [id] = url.pathname.replace(/^\/bookings\/events\/?/, '').split('/').filter(Boolean);
+  if (!id && req.method === 'GET') {
+    const rows = [...events.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return json(req, res, 200, { events: rows, totalRecords: rows.length });
+  }
+  if (!id && req.method === 'POST') {
+    const p = await readBody(req);
+    if (!p.name) return json(req, res, 422, { errors: [{ message: 'name is required' }] });
+    const ev = { id: randomUUID(), name: p.name, description: p.description, startDate: p.startDate, endDate: p.endDate };
+    events.set(ev.id, ev);
+    return json(req, res, 201, ev);
+  }
+  const ev = events.get(id);
+  if (!ev) return json(req, res, 404, { errors: [{ message: 'Event not found' }] });
+  if (req.method === 'GET') return json(req, res, 200, ev);
+  if (req.method === 'PUT') { Object.assign(ev, await readBody(req), { id }); return json(req, res, 204); }
+  if (req.method === 'DELETE') {
+    if ([...bookings.values()].some((b) => b.eventId === id)) {
+      return json(req, res, 422, { errors: [{ message: 'Event is used by bookings and cannot be deleted' }] });
+    }
+    events.delete(id);
+    return json(req, res, 204);
   }
   return json(req, res, 404, { errors: [{ message: 'Not found' }] });
 }
@@ -215,6 +250,9 @@ function proxy(req, res) {
 http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { cors(req, res); res.writeHead(204); return res.end(); }
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname.startsWith('/bookings/events')) {
+    return handleEvents(req, res, url).catch((e) => json(req, res, 500, { errors: [{ message: e.message }] }));
+  }
   if (url.pathname.startsWith('/bookings/bookings')) {
     return handleBookings(req, res, url).catch((e) => json(req, res, 500, { errors: [{ message: e.message }] }));
   }

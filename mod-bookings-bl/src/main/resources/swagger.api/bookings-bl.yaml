@@ -230,6 +230,20 @@ components:
         pickupServicePointId:
           type: string
           format: uuid
+        delivered:
+          type: boolean
+          description: True when items are delivered; then deliveryLocation is required, otherwise pickupServicePointId is required
+          default: false
+        deliveryLocation:
+          type: string
+          maxLength: 500
+        pickupByUserId:
+          type: string
+          format: uuid
+          description: Optional user who will pick up the items, when not the patron
+        eventId:
+          type: string
+          format: uuid
         overrideAvailability:
           type: boolean
           description: >
@@ -270,6 +284,22 @@ components:
         pickupServicePointId:
           type: string
           format: uuid
+        delivered:
+          type: boolean
+          description: True when items are delivered; then deliveryLocation is required, otherwise pickupServicePointId is required
+          default: false
+        deliveryLocation:
+          type: string
+          maxLength: 500
+        pickupByUserId:
+          type: string
+          format: uuid
+          description: Optional user who will pick up the items, when not the patron
+        eventId:
+          type: string
+          format: uuid
+        eventName:
+          type: string
         items:
           type: array
           items:

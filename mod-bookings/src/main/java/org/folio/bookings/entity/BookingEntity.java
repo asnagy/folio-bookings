@@ -45,6 +45,18 @@ public class BookingEntity extends AuditableEntity {
   @Column(name = "pickup_service_point_id")
   private UUID pickupServicePointId;
 
+  @Column(name = "delivered", nullable = false)
+  private boolean delivered;
+
+  @Column(name = "delivery_location", length = 500)
+  private String deliveryLocation;
+
+  @Column(name = "pickup_by_user_id")
+  private UUID pickupByUserId;
+
+  @Column(name = "event_id")
+  private UUID eventId;
+
   @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   private List<BookingItemEntity> bookingItems = new ArrayList<>();
 

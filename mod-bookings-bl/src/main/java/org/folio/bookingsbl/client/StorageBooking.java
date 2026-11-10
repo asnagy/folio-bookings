@@ -21,6 +21,10 @@ public class StorageBooking {
   private String status;
   private String notes;
   private UUID pickupServicePointId;
+  private Boolean delivered;
+  private String deliveryLocation;
+  private UUID pickupByUserId;
+  private UUID eventId;
   private List<StorageBookingItem> items = new ArrayList<>();
   private Metadata metadata;
 
