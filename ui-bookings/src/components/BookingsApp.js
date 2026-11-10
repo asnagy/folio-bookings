@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Route, Switch } from 'react-router-dom';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -15,7 +15,7 @@ import {
   Icon,
 } from '@folio/stripes/components';
 import { CheckboxFilter, SearchAndSortQuery } from '@folio/stripes/smart-components';
-import { stripesConnect, useStripes } from '@folio/stripes/core';
+import { stripesConnect, useOkapiKy, useStripes } from '@folio/stripes/core';
 
 import BookingDetail from './BookingDetail/BookingDetail';
 import BookingForm from './BookingForm/BookingForm';
@@ -29,14 +29,14 @@ import css from './BookingsApp.css';
 const COLUMN_WIDTHS = {
   patronName:  '16%',
   items:       '24%',
-  startDate:   '12%',
-  endDate:     '12%',
+  startDate:   '13%',
+  endDate:     '13%',
+  servicePoint: '14%',
   status:      '12%',
-  recall:      '10%',
-  notes:       '14%',
+  recall:      '8%',
 };
 
-const COLUMN_NAMES = ['patronName', 'items', 'startDate', 'endDate', 'status', 'recall', 'notes'];
+const COLUMN_NAMES = ['patronName', 'items', 'startDate', 'endDate', 'servicePoint', 'status', 'recall'];
 
 /**
  * BookingsApp
@@ -52,6 +52,17 @@ const BookingsApp = (props) => {
   const { resources, mutator, match, history, location } = props;
   const stripes = useStripes();
   const intl = useIntl();
+  const ky = useOkapiKy();
+
+  // Service point names, so the list can show a name instead of an id
+  const [servicePointNames, setServicePointNames] = useState({});
+  useEffect(() => {
+    ky.get('service-points', { searchParams: { query: 'cql.allRecords=1', limit: 1000 } }).json()
+      .then(data => setServicePointNames(
+        Object.fromEntries((data.servicepoints || []).map(sp => [sp.id, sp.name])),
+      ))
+      .catch(() => setServicePointNames({}));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -113,7 +124,9 @@ const BookingsApp = (props) => {
         </ul>
       );
     },
-    notes:     (row) => row.notes || '—',
+    servicePoint: (row) => (row.pickupServicePointId
+      ? (servicePointNames[row.pickupServicePointId] || row.pickupServicePointId)
+      : '—'),
   };
 
   const columnMapping = {
@@ -123,7 +136,7 @@ const BookingsApp = (props) => {
     status:     <FormattedMessage id="ui-bookings.booking.status" />,
     recall:     <FormattedMessage id="ui-bookings.booking.recall" />,
     items:      <FormattedMessage id="ui-bookings.booking.itemCount" />,
-    notes:      <FormattedMessage id="ui-bookings.booking.notes" />,
+    servicePoint: <FormattedMessage id="ui-bookings.booking.pickupServicePoint" />,
   };
 
   // ------------------------------------------------------------------
