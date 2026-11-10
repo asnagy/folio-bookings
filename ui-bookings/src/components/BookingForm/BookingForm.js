@@ -26,6 +26,7 @@ import { Pluggable, useOkapiKy } from '@folio/stripes/core';
 
 import BookingItemsTable from '../BookingItemsTable';
 import PatronLookup from './PatronLookup/PatronLookup';
+import ItemSelectModal from './ItemSelectModal/ItemSelectModal';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -101,6 +102,8 @@ const BookingForm = (props) => {
   const [itemBarcode, setItemBarcode] = useState('');
   const [itemLookupError, setItemLookupError] = useState(null);
   const [checkedOutItems, setCheckedOutItems] = useState([]);
+  const [itemAddedMessage, setItemAddedMessage] = useState(null);
+  const [picker, setPicker] = useState(null); // { instance, items } while the item picker is open
 
   const ky = useOkapiKy();
 
@@ -148,111 +151,97 @@ const BookingForm = (props) => {
   }, []);
 
   // ------------------------------------------------------------------
-  // Item barcode lookup
+  // Items: barcode scan and title look-up both end in addItems()
   // ------------------------------------------------------------------
 
-  const lookupItemByBarcode = useCallback(async (barcode, currentItems, form) => {
+  // Inventory item record -> the shape stored in the form (one entry per item record)
+  const toBookingItem = (item, instanceTitle) => ({
+    itemId: item.id,
+    itemBarcode: item.barcode,
+    itemTitle: instanceTitle || item.title || '',
+    callNumber: item.effectiveCallNumberComponents?.callNumber || item.callNumber || '',
+    itemStatus: item.status?.name,
+    instanceId: item.instanceId,
+    holdingsRecordId: item.holdingsRecordId,
+    recallStatus: item.status?.name === 'Checked out' ? 'REQUIRED' : 'NOT_REQUIRED',
+  });
+
+  // Adds item records to the booking (skipping any already there) and flags items on loan
+  const addItems = (inventoryItems, instanceTitle, currentItems, form) => {
+    const existing = new Set(currentItems.map(i => i.itemId));
+    const added = [];
+    inventoryItems.forEach((inv) => {
+      if (existing.has(inv.id)) return;
+      const bookingItem = toBookingItem(inv, instanceTitle);
+      form.mutators.push('items', bookingItem);
+      existing.add(inv.id);
+      added.push(bookingItem);
+    });
+    const onLoan = added.filter(i => i.itemStatus === 'Checked out');
+    if (onLoan.length) setCheckedOutItems(prev => [...prev, ...onLoan]);
+    return added;
+  };
+
+  const lookupItemByBarcode = async (barcode, currentItems, form) => {
     setItemLookupError(null);
-    if (!barcode?.trim()) return;
-    if (currentItems.some(i => i.itemBarcode === barcode.trim())) {
+    setItemAddedMessage(null);
+    const trimmed = barcode?.trim();
+    if (!trimmed) return;
+    if (currentItems.some(i => i.itemBarcode === trimmed)) {
       setItemLookupError(intl.formatMessage({ id: 'ui-bookings.error.itemAlreadyAdded' }));
       return;
     }
     try {
       const data = await ky.get('inventory/items', {
-        searchParams: { query: `barcode=="${barcode.trim()}"`, limit: 1 },
+        searchParams: { query: `barcode=="${trimmed}"`, limit: 1 },
       }).json();
       if (!data.items || data.items.length === 0) {
-        setItemLookupError(intl.formatMessage(
-          { id: 'ui-bookings.error.itemNotFound' }, { barcode }
-        ));
+        setItemLookupError(intl.formatMessage({ id: 'ui-bookings.error.itemNotFound' }, { barcode: trimmed }));
         return;
       }
-      const item = data.items[0];
-      const newItem = {
-        itemId: item.id,
-        itemBarcode: item.barcode,
-        itemTitle: item.title,
-        callNumber: item.callNumber,
-        itemStatus: item.status?.name,
-        instanceId: item.instanceId,
-        holdingsRecordId: item.holdingsRecordId,
-        recallStatus: item.status?.name === 'Checked out' ? 'REQUIRED' : 'NOT_REQUIRED',
-      };
-      form.mutators.push('items', newItem);
+      const [added] = addItems([data.items[0]], null, currentItems, form);
       setItemBarcode('');
-      if (item.status?.name === 'Checked out') {
-        setCheckedOutItems(prev => [...prev, newItem]);
+      if (added) {
+        setItemAddedMessage(intl.formatMessage(
+          { id: 'ui-bookings.item.added' },
+          { title: added.itemTitle || added.itemBarcode, barcode: added.itemBarcode },
+        ));
       }
     } catch (err) {
       setItemLookupError(err.message);
     }
-  }, [intl, ky]);
+  };
 
-  // ------------------------------------------------------------------
-  // Instance plugin callback — user selected an instance, now pick item
-  // ------------------------------------------------------------------
-
-  const onSelectInstance = useCallback(async (instance, currentItems, form) => {
+  // Title look-up: the plugin returns an instance; load its item records and let staff pick
+  const onSelectInstance = async (instance) => {
     setItemLookupError(null);
+    setItemAddedMessage(null);
     if (!instance?.id) return;
     try {
-      // Fetch items for this instance
-      const data = await ky.get('inventory/items', {
-        searchParams: { query: `holdingsRecord.instanceId=="${instance.id}"`, limit: 200 },
+      const holdings = await ky.get('holdings-storage/holdings', {
+        searchParams: { query: `instanceId=="${instance.id}"`, limit: 1000 },
       }).json();
-      const items = data.items || [];
-
-      if (items.length === 0) {
+      const holdingIds = (holdings.holdingsRecords || []).map(h => h.id);
+      const found = [];
+      for (let i = 0; i < holdingIds.length; i += 25) {
+        const chunk = holdingIds.slice(i, i + 25);
+        const data = await ky.get('inventory/items', {
+          searchParams: {
+            query: `holdingsRecordId==(${chunk.map(id => `"${id}"`).join(' or ')})`,
+            limit: 1000,
+          },
+        }).json();
+        found.push(...(data.items || []));
+      }
+      if (found.length === 0) {
         setItemLookupError(intl.formatMessage({ id: 'ui-bookings.error.noItemsForInstance' }));
         return;
       }
-
-      // If there's only one item, add it directly
-      if (items.length === 1) {
-        const item = items[0];
-        if (!currentItems.some(i => i.itemId === item.id)) {
-          const newItem = {
-            itemId: item.id,
-            itemBarcode: item.barcode,
-            itemTitle: instance.title,
-            callNumber: item.effectiveCallNumberComponents?.callNumber || '',
-            itemStatus: item.status?.name,
-            instanceId: instance.id,
-            holdingsRecordId: item.holdingsRecordId,
-            recallStatus: item.status?.name === 'Checked out' ? 'REQUIRED' : 'NOT_REQUIRED',
-          };
-          form.mutators.push('items', newItem);
-          if (item.status?.name === 'Checked out') {
-            setCheckedOutItems(prev => [...prev, newItem]);
-          }
-        }
-        return;
-      }
-
-      // Multiple items — add all (UI will show them for review)
-      items.forEach(item => {
-        if (!currentItems.some(i => i.itemId === item.id)) {
-          const newItem = {
-            itemId: item.id,
-            itemBarcode: item.barcode,
-            itemTitle: instance.title,
-            callNumber: item.effectiveCallNumberComponents?.callNumber || '',
-            itemStatus: item.status?.name,
-            instanceId: instance.id,
-            holdingsRecordId: item.holdingsRecordId,
-            recallStatus: item.status?.name === 'Checked out' ? 'REQUIRED' : 'NOT_REQUIRED',
-          };
-          form.mutators.push('items', newItem);
-          if (item.status?.name === 'Checked out') {
-            setCheckedOutItems(prev => [...prev, newItem]);
-          }
-        }
-      });
+      setPicker({ instance, items: found });
     } catch (err) {
       setItemLookupError(err.message);
     }
-  }, [intl, ky]);
+  };
 
   // ------------------------------------------------------------------
   // Form submission
@@ -516,7 +505,7 @@ const BookingForm = (props) => {
                       searchLabel={<FormattedMessage id="ui-bookings.item.lookUp" />}
                       searchButtonStyle="link"
                       marginTop0
-                      selectInstance={(instance) => onSelectInstance(instance, values.items || [], form)}
+                      selectInstance={onSelectInstance}
                       dataKey="instances"
                     >
                       <Button buttonStyle="link" id="clickable-find-instance-fallback">
@@ -531,6 +520,30 @@ const BookingForm = (props) => {
                     {itemLookupError}
                   </MessageBanner>
                 )}
+
+                {itemAddedMessage && (
+                  <MessageBanner type="success" onExited={() => setItemAddedMessage(null)}>
+                    {itemAddedMessage}
+                  </MessageBanner>
+                )}
+
+                <ItemSelectModal
+                  open={Boolean(picker)}
+                  instance={picker?.instance}
+                  items={picker?.items || []}
+                  existingItemIds={(values.items || []).map(i => i.itemId)}
+                  onClose={() => setPicker(null)}
+                  onAdd={(selectedItems) => {
+                    const added = addItems(selectedItems, picker?.instance?.title, values.items || [], form);
+                    setPicker(null);
+                    if (added.length) {
+                      setItemAddedMessage(intl.formatMessage(
+                        { id: 'ui-bookings.item.added' },
+                        { title: added[0].itemTitle, barcode: added.map(a => a.itemBarcode).join(', ') },
+                      ));
+                    }
+                  }}
+                />
 
                 {/* Items table */}
                 <FieldArray name="items">
