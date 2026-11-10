@@ -36,7 +36,7 @@ const COLUMN_WIDTHS = {
   recall:      '8%',
 };
 
-const COLUMN_NAMES = ['patronName', 'items', 'startDate', 'endDate', 'servicePoint', 'status', 'recall'];
+const COLUMN_NAMES = ['patronName', 'items', 'servicePoint', 'startDate', 'endDate', 'status', 'recall'];
 
 /**
  * BookingsApp
