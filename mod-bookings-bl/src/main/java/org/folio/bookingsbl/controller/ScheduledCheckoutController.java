@@ -28,6 +28,11 @@ public class ScheduledCheckoutController {
   public ResponseEntity<Void> runScheduledCheckout() {
     log.info("runScheduledCheckout:: timer invoked by Okapi");
     try {
+      bookingBlService.processScheduledRecalls();
+    } catch (Exception e) {
+      log.error("runScheduledCheckout:: unhandled error during scheduled recalls: {}", e.getMessage(), e);
+    }
+    try {
       bookingBlService.processScheduledCheckouts();
     } catch (Exception e) {
       // Never return a non-200 to Okapi timer or it will stop retrying

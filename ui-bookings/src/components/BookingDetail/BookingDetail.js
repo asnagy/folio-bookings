@@ -50,7 +50,7 @@ const BookingDetail = (props) => {
   const [actionError, setActionError] = useState(null);
   const [servicePointName, setServicePointName] = useState(null);
 
-  const canActivate = stripes.hasPerm('ui-bookings.create-edit');
+  const canActivate = stripes.hasPerm('ui-bookings.activate');
 
   const ky = useOkapiKy();
   const intl = useIntl();

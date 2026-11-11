@@ -3,20 +3,27 @@ import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Settings } from '@folio/stripes/smart-components';
 
+import BookingLimits from './BookingLimits';
+import BookingTiming from './BookingTiming';
+
 /**
- * Settings entry point for ui-bookings.
- * Registered because stripes.actsAs includes "settings".
- * Currently provides a placeholder — future settings sections
- * (e.g. default pickup service point, booking lead time limits) go here.
+ * Settings > Bookings. Registered because stripes.actsAs includes "settings".
+ * Values live in mod-settings (scope "mod-bookings") and are read by mod-bookings-bl.
  */
 const BookingsSettings = (props) => {
   const pages = [
-    // Future settings sections are added to this array, e.g.:
-    // {
-    //   route: 'general',
-    //   label: <FormattedMessage id="ui-bookings.settings.general" />,
-    //   component: GeneralSettings,
-    // },
+    {
+      route: 'limits',
+      label: <FormattedMessage id="ui-bookings.settings.limits" />,
+      component: BookingLimits,
+      perm: 'ui-bookings.settings.manage',
+    },
+    {
+      route: 'timing',
+      label: <FormattedMessage id="ui-bookings.settings.timing" />,
+      component: BookingTiming,
+      perm: 'ui-bookings.settings.manage',
+    },
   ];
 
   return (

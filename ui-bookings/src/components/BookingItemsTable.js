@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
   Button,
@@ -9,6 +10,7 @@ import {
 } from '@folio/stripes/components';
 
 import BookingRecallBadge from './BookingStatus/BookingRecallBadge';
+import { inventoryItemPath } from '../util/bookingUtils';
 
 const COLUMN_WIDTHS = {
   itemBarcode:  '15%',
@@ -41,9 +43,16 @@ const BookingItemsTable = ({ items, onRemove, readOnly }) => {
     actions:      '',
   };
 
+  // In the read-only view, barcode and title open the item's record in the Inventory app
+  const inventoryLink = (row, text) => {
+    if (!text) return <NoValue />;
+    const path = readOnly ? inventoryItemPath(row) : null;
+    return path ? <Link to={path}>{text}</Link> : text;
+  };
+
   const formatter = {
-    itemBarcode:  (row) => row.itemBarcode || <NoValue />,
-    itemTitle:    (row) => row.itemTitle    || <NoValue />,
+    itemBarcode:  (row) => inventoryLink(row, row.itemBarcode),
+    itemTitle:    (row) => inventoryLink(row, row.itemTitle),
     callNumber:   (row) => row.callNumber   || <NoValue />,
     itemStatus:   (row) => row.itemStatus   || <NoValue />,
     recallStatus: (row) => <BookingRecallBadge status={row.recallStatus} />,

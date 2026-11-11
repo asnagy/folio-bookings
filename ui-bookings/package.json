@@ -22,7 +22,8 @@
   },
   "stripes": {
     "actsAs": [
-      "app"
+      "app",
+      "settings"
     ],
     "displayName": "ui-bookings.meta.title",
     "route": "/bookings",
@@ -39,7 +40,8 @@
       "bookings": "1.0",
       "users": "16.1",
       "inventory": "10.0 11.0 12.0 13.0",
-      "circulation": "9.0 10.0 11.0 12.0 13.0 14.0"
+      "circulation": "9.0 10.0 11.0 12.0 13.0 14.0",
+      "settings": "1.1"
     },
     "optionalOkapiInterfaces": {
       "bookings-storage": "1.0"
@@ -56,7 +58,13 @@
         "description": "View booking records",
         "subPermissions": [
           "module.bookings.enabled",
-          "bookings.bookings.view"
+          "bookings.bookings.view",
+          "users.item.get",
+          "users.collection.get",
+          "inventory.items.item.get",
+          "inventory.items.collection.get",
+          "inventory-storage.holdings.collection.get",
+          "inventory-storage.service-points.collection.get"
         ],
         "visible": true
       },
@@ -99,6 +107,45 @@
           "bookings.events.manage"
         ],
         "visible": true
+      },
+      {
+        "permissionName": "ui-bookings.activate",
+        "displayName": "Bookings: Activate bookings",
+        "description": "Manually check out the items of a booking before its start time",
+        "subPermissions": [
+          "ui-bookings.view",
+          "bookings.bookings.activate"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-bookings.override-limit",
+        "displayName": "Bookings: Override booking limit",
+        "description": "Create bookings beyond the patron group's booking limit",
+        "subPermissions": [
+          "ui-bookings.create-edit",
+          "bookings.bookings.override-limit"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-bookings.settings.manage",
+        "displayName": "Settings (Bookings): Manage settings",
+        "description": "View and change booking limits, recall lead time and checkout lead time",
+        "subPermissions": [
+          "settings.bookings.enabled",
+          "bookings.settings.manage",
+          "usergroups.collection.get"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "settings.bookings.enabled",
+        "displayName": "Settings (Bookings): display list of settings pages",
+        "subPermissions": [
+          "settings.enabled"
+        ],
+        "visible": false
       }
     ]
   },

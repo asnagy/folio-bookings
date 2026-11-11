@@ -26,6 +26,20 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(buildErrors(ex.getMessage(), "VALIDATION_ERROR"));
   }
 
+  @ExceptionHandler(BookingForbiddenException.class)
+  public ResponseEntity<Errors> handleForbidden(BookingForbiddenException ex) {
+    log.warn("handleForbidden:: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(buildErrors(ex.getMessage(), "FORBIDDEN"));
+  }
+
+  /** 409 so the UI can offer an override (code BOOKING_LIMIT_EXCEEDED) or, when not overridable, a plain error. */
+  @ExceptionHandler(BookingLimitExceededException.class)
+  public ResponseEntity<Errors> handleLimit(BookingLimitExceededException ex) {
+    log.warn("handleLimit:: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(buildErrors(ex.getMessage(),
+      ex.isOverridable() ? "BOOKING_LIMIT_EXCEEDED" : "BOOKING_LIMIT_EXCEEDED_NO_OVERRIDE"));
+  }
+
   /** Errors from the storage module (e.g. deleting an event that is in use) keep their status and message. */
   @ExceptionHandler(feign.FeignException.class)
   public ResponseEntity<Errors> handleFeign(feign.FeignException ex) {

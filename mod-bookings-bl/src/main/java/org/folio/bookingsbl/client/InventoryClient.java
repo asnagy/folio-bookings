@@ -25,7 +25,20 @@ public interface InventoryClient {
   @GetMapping("/inventory/items")
   ItemsCollection getItems(@RequestParam("query") String query, @RequestParam("limit") int limit);
 
+  @GetMapping("/holdings-storage/holdings/{id}")
+  FlagDto getHoldings(@PathVariable UUID id);
+
+  @GetMapping("/instance-storage/instances/{id}")
+  FlagDto getInstance(@PathVariable UUID id);
+
   // ---- inner DTOs ----
+
+  /** Holdings or instance record, of which only the booking flag is needed. */
+  @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  class FlagDto {
+    private Boolean suppressFromBooking;
+  }
 
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,6 +52,7 @@ public interface InventoryClient {
     private String effectiveLocationId;
     private String holdingsRecordId;
     private String instanceId;
+    private Boolean suppressFromBooking;
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

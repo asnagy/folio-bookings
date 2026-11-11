@@ -5,6 +5,8 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.bookingsbl.client.*;
 import org.folio.bookingsbl.domain.dto.*;
 import org.folio.bookingsbl.exception.BookingBlException;
+import org.folio.bookingsbl.exception.BookingForbiddenException;
+import org.folio.bookingsbl.exception.BookingLimitExceededException;
 import org.folio.bookingsbl.exception.BookingNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,8 @@ public class BookingBlService {
   private final InventoryClient      inventoryClient;
   private final CirculationClient    circulationClient;
   private final UsersClient          usersClient;
+  private final SettingsService      settingsService;
+  private final CallerPermissions    callerPermissions;
 
   // -------------------------------------------------------------------------
   // Read operations
@@ -73,8 +77,11 @@ public class BookingBlService {
     log.info("createBooking:: userId={} items={} start={}",
       request.getUserId(), request.getItemIds(), request.getStartDate());
     validateRequest(request);
+    var settings = settingsService.getSettings();
+    enforceOverridePermissions(request);
+    enforceBookingLimit(request, null, settings);
 
-    var items = resolveItems(request, Map.of());
+    var items = resolveItems(request, Map.of(), settings);
     var booking = new StorageBooking();
     applyRequest(booking, request);
     booking.setItems(items);
@@ -89,11 +96,17 @@ public class BookingBlService {
     log.info("updateBooking:: bookingId={}", id);
     var existing = loadBooking(id);
     validateRequest(request);
+    var settings = settingsService.getSettings();
+    enforceOverridePermissions(request);
+    if (!Objects.equals(existing.getUserId(), request.getUserId())) {
+      // A different patron is taking over the booking: their limit applies
+      enforceBookingLimit(request, id, settings);
+    }
 
     var existingByItemId = existing.getItems().stream()
       .filter(i -> i.getItemId() != null)
       .collect(Collectors.toMap(StorageBookingItem::getItemId, Function.identity(), (a, b) -> a));
-    var items = resolveItems(request, existingByItemId);
+    var items = resolveItems(request, existingByItemId, settings);
 
     applyRequest(existing, request);
     existing.setItems(items);
@@ -136,9 +149,10 @@ public class BookingBlService {
    */
   public void processScheduledCheckouts() {
     log.info("processScheduledCheckouts:: scanning for bookings due for checkout");
+    var settings = settingsService.getSettings();
     var cql = String.format(
       "startDate<=\"%s\" and status==(\"PENDING\" or \"CONFIRMED\" or \"RECALL_REQUIRED\" or \"RECALL_TRIGGERED\")",
-      OffsetDateTime.now().plusMinutes(1));
+      OffsetDateTime.now().plusMinutes(1L + settings.checkoutLeadMinutes()));
     var due = storageClient.getBookings(cql, 0, 500);
     if (due == null || due.getBookings() == null) {
       return;
@@ -156,11 +170,135 @@ public class BookingBlService {
   }
 
   // -------------------------------------------------------------------------
+  // Scheduled recalls (called by the same timer, before checkouts)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Sends the recalls that were held back until "recall lead time" days before the booking starts.
+   * Items that are no longer on loan need no recall; recalls that failed earlier are retried here.
+   */
+  public void processScheduledRecalls() {
+    log.info("processScheduledRecalls:: scanning for bookings whose recall is due");
+    var settings = settingsService.getSettings();
+    var cql = String.format("recallRequired==true and startDate<=\"%s\" and status==\"RECALL_REQUIRED\"",
+      OffsetDateTime.now().plusDays(settings.recallLeadDays()));
+    var due = storageClient.getBookings(cql, 0, 500);
+    if (due == null || due.getBookings() == null) {
+      return;
+    }
+    for (var booking : due.getBookings()) {
+      try {
+        if (recallDueItems(booking)) {
+          booking.setStatus(computeStatus("PENDING", booking.getItems()));
+          storageClient.updateBooking(booking.getId(), booking);
+        }
+      } catch (Exception e) {
+        log.error("processScheduledRecalls:: failed for bookingId={}: {}", booking.getId(), e.getMessage(), e);
+      }
+    }
+  }
+
+  /** Returns true when any item's recall state changed. */
+  private boolean recallDueItems(StorageBooking booking) {
+    boolean changed = false;
+    for (var booked : booking.getItems()) {
+      if (!"REQUIRED".equals(booked.getRecallStatus()) || booked.getItemId() == null) {
+        continue;
+      }
+      var item = inventoryClient.getItem(booked.getItemId());
+      if (item == null || !isCheckedOut(item)) {
+        booked.setRecallStatus("NOT_REQUIRED"); // came back on its own, nothing to recall
+        changed = true;
+        continue;
+      }
+      triggerRecall(item, booking.getUserId(), booking.getPickupServicePointId(), booked);
+      changed = changed || !"REQUIRED".equals(booked.getRecallStatus());
+    }
+    return changed;
+  }
+
+  private static boolean isCheckedOut(InventoryClient.ItemDto item) {
+    return item.getStatus() != null && ITEM_STATUS_CHECKED_OUT.equals(item.getStatus().getName());
+  }
+
+  // -------------------------------------------------------------------------
+  // Limits, permissions and suppression
+  // -------------------------------------------------------------------------
+
+  private void enforceOverridePermissions(BookingRequest request) {
+    if (Boolean.TRUE.equals(request.getOverrideAvailability())
+      && !callerPermissions.has(CallerPermissions.OVERRIDE_AVAILABILITY)) {
+      throw new BookingForbiddenException("You do not have permission to override item availability");
+    }
+    if (Boolean.TRUE.equals(request.getOverrideBookingLimit())
+      && !callerPermissions.has(CallerPermissions.OVERRIDE_LIMIT)) {
+      throw new BookingForbiddenException("You do not have permission to override the booking limit");
+    }
+  }
+
+  /**
+   * Counts the patron's active and future bookings (not cancelled or completed, not yet ended) and
+   * rejects the request when the limit for their patron group is reached.
+   */
+  private void enforceBookingLimit(BookingRequest request, UUID excludeBookingId, BookingSettings settings) {
+    UsersClient.UserDto patron;
+    try {
+      patron = usersClient.getUser(request.getUserId());
+    } catch (Exception e) {
+      log.warn("enforceBookingLimit:: cannot load patron {}: {}", request.getUserId(), e.getMessage());
+      return;
+    }
+    Integer limit = settings.limitFor(patron != null ? patron.getPatronGroup() : null);
+    if (limit == null) {
+      return;
+    }
+    var cql = String.format("userId==\"%s\" and endDate>=\"%s\"", request.getUserId(), OffsetDateTime.now());
+    var existing = storageClient.getBookings(cql, 0, 500);
+    long current = existing == null || existing.getBookings() == null ? 0 : existing.getBookings().stream()
+      .filter(b -> !"CANCELLED".equals(b.getStatus()) && !"COMPLETED".equals(b.getStatus()))
+      .filter(b -> !b.getId().equals(excludeBookingId))
+      .count();
+    if (current < limit) {
+      return;
+    }
+    if (Boolean.TRUE.equals(request.getOverrideBookingLimit()) && settings.allowLimitOverride()) {
+      log.info("enforceBookingLimit:: limit {} exceeded for userId={} but overridden", limit, request.getUserId());
+      return;
+    }
+    throw new BookingLimitExceededException(limit, (int) current, settings.allowLimitOverride());
+  }
+
+  /**
+   * An item is suppressed from booking when the flag is set on the item, its holdings record or its
+   * instance. Records that cannot be read, or that do not know the flag, count as not suppressed.
+   */
+  private boolean isSuppressedFromBooking(InventoryClient.ItemDto item) {
+    if (Boolean.TRUE.equals(item.getSuppressFromBooking())) {
+      return true;
+    }
+    return flagged(() -> item.getHoldingsRecordId() == null ? null
+        : inventoryClient.getHoldings(UUID.fromString(item.getHoldingsRecordId())), "holdings", item.getId())
+      || flagged(() -> item.getInstanceId() == null ? null
+        : inventoryClient.getInstance(UUID.fromString(item.getInstanceId())), "instance", item.getId());
+  }
+
+  private boolean flagged(java.util.function.Supplier<InventoryClient.FlagDto> lookup, String level, String itemId) {
+    try {
+      var record = lookup.get();
+      return record != null && Boolean.TRUE.equals(record.getSuppressFromBooking());
+    } catch (Exception e) {
+      log.warn("isSuppressedFromBooking:: cannot read {} of item {}: {}", level, itemId, e.getMessage());
+      return false;
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Item resolution, recall and checkout
   // -------------------------------------------------------------------------
 
   /** Resolves each requested item; items already in the booking keep their stored state. */
-  private List<StorageBookingItem> resolveItems(BookingRequest request, Map<UUID, StorageBookingItem> existing) {
+  private List<StorageBookingItem> resolveItems(BookingRequest request, Map<UUID, StorageBookingItem> existing,
+                                                BookingSettings settings) {
     var items = new ArrayList<StorageBookingItem>();
     for (UUID itemId : new LinkedHashSet<>(request.getItemIds())) {
       var known = existing.get(itemId);
@@ -172,13 +310,22 @@ public class BookingBlService {
       if (item == null) {
         throw new BookingBlException("Item not found in inventory: " + itemId);
       }
+      boolean override = Boolean.TRUE.equals(request.getOverrideAvailability());
+      if (!override && isSuppressedFromBooking(item)) {
+        throw new BookingBlException("Item " + (item.getBarcode() != null ? item.getBarcode() : itemId)
+          + " is suppressed from booking");
+      }
       var booked = toStorageItem(item);
-      // Live status is used only to decide on recall now; it is never stored
-      if (item.getStatus() != null && ITEM_STATUS_CHECKED_OUT.equals(item.getStatus().getName())) {
-        if (Boolean.TRUE.equals(request.getOverrideAvailability())) {
+      // Live status is used only to decide on recall; it is never stored
+      if (isCheckedOut(item)) {
+        if (override) {
           log.info("resolveItems:: item {} is checked out but override-availability is set", itemId);
+        } else if (!OffsetDateTime.now().plusDays(settings.recallLeadDays()).isBefore(request.getStartDate())) {
+          // Already inside the recall lead time: recall now
+          triggerRecall(item, request.getUserId(), request.getPickupServicePointId(), booked);
         } else {
-          triggerRecall(item, request, booked);
+          // Flagged for staff now; the scheduler sends the recall when the lead time is reached
+          booked.setRecallStatus("REQUIRED");
         }
       }
       items.add(booked);
@@ -203,15 +350,15 @@ public class BookingBlService {
   }
 
   /** Creates a Recall request on the item; if that fails the item is flagged REQUIRED for staff. */
-  private void triggerRecall(InventoryClient.ItemDto item, BookingRequest request, StorageBookingItem booked) {
+  private void triggerRecall(InventoryClient.ItemDto item, UUID userId, UUID pickupServicePointId,
+                             StorageBookingItem booked) {
     try {
       var recall = new CirculationClient.RecallRequestDto();
       recall.setItemId(item.getId());
       recall.setInstanceId(item.getInstanceId());
       recall.setHoldingsRecordId(item.getHoldingsRecordId());
-      recall.setRequesterId(request.getUserId().toString());
-      recall.setPickupServicePointId(
-        request.getPickupServicePointId() != null ? request.getPickupServicePointId().toString() : null);
+      recall.setRequesterId(userId.toString());
+      recall.setPickupServicePointId(pickupServicePointId != null ? pickupServicePointId.toString() : null);
       recall.setRequestDate(OffsetDateTime.now());
       circulationClient.createRecallRequest(recall);
       booked.setRecallStatus("TRIGGERED");
@@ -456,6 +603,8 @@ public class BookingBlService {
     var summary = new BookingItemSummary();
     summary.setId(i.getId());
     summary.setItemId(i.getItemId());
+    summary.setInstanceId(i.getInstanceId());
+    summary.setHoldingsRecordId(i.getHoldingsRecordId());
     summary.setItemBarcode(i.getItemBarcode());
     summary.setItemTitle(i.getItemTitle());
     summary.setCallNumber(i.getCallNumber());

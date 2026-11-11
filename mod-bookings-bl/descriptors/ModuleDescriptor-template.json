@@ -13,6 +13,14 @@
           "pathPattern": "/bookings/bookings",
           "permissionsRequired": [
             "bookings.bookings.collection.get"
+          ],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "bookings-storage.bookings.collection.get",
+            "bookings-storage.events.collection.get"
           ]
         },
         {
@@ -22,6 +30,25 @@
           "pathPattern": "/bookings/bookings",
           "permissionsRequired": [
             "bookings.bookings.item.post"
+          ],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.item.get",
+            "mod-settings.entries.collection.get",
+            "mod-settings.global.read.mod-bookings.manage",
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.bookings.collection.get",
+            "bookings-storage.bookings.item.post",
+            "bookings-storage.events.collection.get",
+            "circulation.requests.item.post"
+          ],
+          "permissionsDesired": [
+            "bookings.override-availability",
+            "bookings.override-limit"
           ]
         },
         {
@@ -31,6 +58,14 @@
           "pathPattern": "/bookings/bookings/{bookingId}",
           "permissionsRequired": [
             "bookings.bookings.item.get"
+          ],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.events.collection.get"
           ]
         },
         {
@@ -40,6 +75,25 @@
           "pathPattern": "/bookings/bookings/{bookingId}",
           "permissionsRequired": [
             "bookings.bookings.item.put"
+          ],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.item.get",
+            "mod-settings.entries.collection.get",
+            "mod-settings.global.read.mod-bookings.manage",
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.bookings.collection.get",
+            "bookings-storage.bookings.item.put",
+            "bookings-storage.events.collection.get",
+            "circulation.requests.item.post"
+          ],
+          "permissionsDesired": [
+            "bookings.override-availability",
+            "bookings.override-limit"
           ]
         },
         {
@@ -49,6 +103,10 @@
           "pathPattern": "/bookings/bookings/{bookingId}",
           "permissionsRequired": [
             "bookings.bookings.item.delete"
+          ],
+          "modulePermissions": [
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.bookings.item.delete"
           ]
         },
         {
@@ -61,6 +119,15 @@
           ],
           "permissionsDesired": [
             "bookings.override-availability"
+          ],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.bookings.item.put",
+            "circulation.check-out-by-barcode.post"
           ]
         },
         {
@@ -70,6 +137,9 @@
           "pathPattern": "/bookings/events",
           "permissionsRequired": [
             "bookings.events.collection.get"
+          ],
+          "modulePermissions": [
+            "bookings-storage.events.collection.get"
           ]
         },
         {
@@ -79,6 +149,9 @@
           "pathPattern": "/bookings/events/{eventId}",
           "permissionsRequired": [
             "bookings.events.item.get"
+          ],
+          "modulePermissions": [
+            "bookings-storage.events.item.get"
           ]
         },
         {
@@ -88,6 +161,9 @@
           "pathPattern": "/bookings/events",
           "permissionsRequired": [
             "bookings.events.item.post"
+          ],
+          "modulePermissions": [
+            "bookings-storage.events.item.post"
           ]
         },
         {
@@ -97,6 +173,9 @@
           "pathPattern": "/bookings/events/{eventId}",
           "permissionsRequired": [
             "bookings.events.item.put"
+          ],
+          "modulePermissions": [
+            "bookings-storage.events.item.put"
           ]
         },
         {
@@ -106,6 +185,9 @@
           "pathPattern": "/bookings/events/{eventId}",
           "permissionsRequired": [
             "bookings.events.item.delete"
+          ],
+          "modulePermissions": [
+            "bookings-storage.events.item.delete"
           ]
         }
       ]
@@ -142,7 +224,22 @@
           "pathPattern": "/bookings/scheduled/checkout",
           "unit": "minute",
           "delay": "5",
-          "permissionsRequired": []
+          "permissionsRequired": [],
+          "modulePermissions": [
+            "users.item.get",
+            "users.collection.get",
+            "inventory.items.item.get",
+            "inventory.items.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.item.get",
+            "mod-settings.entries.collection.get",
+            "mod-settings.global.read.mod-bookings.manage",
+            "bookings-storage.bookings.item.get",
+            "bookings-storage.bookings.collection.get",
+            "bookings-storage.bookings.item.put",
+            "circulation.requests.item.post",
+            "circulation.check-out-by-barcode.post"
+          ]
         }
       ]
     }
@@ -167,6 +264,10 @@
     {
       "id": "loan-storage",
       "version": "7.0"
+    },
+    {
+      "id": "settings",
+      "version": "1.1"
     }
   ],
   "permissionSets": [
@@ -223,8 +324,7 @@
       "subPermissions": [
         "bookings.bookings.view",
         "bookings.bookings.item.post",
-        "bookings.bookings.item.put",
-        "bookings.bookings.item.activate"
+        "bookings.bookings.item.put"
       ],
       "visible": true
     },
@@ -285,6 +385,44 @@
       "visible": true
     },
     {
+      "permissionName": "bookings.override-limit",
+      "displayName": "Bookings - override booking limit",
+      "description": "Create a booking even though the patron has reached their booking limit"
+    },
+    {
+      "permissionName": "bookings.bookings.override-limit",
+      "displayName": "Bookings: Override booking limit",
+      "description": "Allow bookings beyond the patron group's booking limit",
+      "subPermissions": [
+        "bookings.override-limit"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.settings.manage",
+      "displayName": "Bookings: Manage settings",
+      "description": "View and change Bookings settings (limits, recall and checkout timing)",
+      "subPermissions": [
+        "mod-settings.entries.collection.get",
+        "mod-settings.entries.item.get",
+        "mod-settings.entries.item.post",
+        "mod-settings.entries.item.put",
+        "mod-settings.global.read.mod-bookings.manage",
+        "mod-settings.global.write.mod-bookings.manage",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "bookings.bookings.activate",
+      "displayName": "Bookings: Activate bookings",
+      "description": "Manually check out the items of a booking before its start time",
+      "subPermissions": [
+        "bookings.bookings.item.activate"
+      ],
+      "visible": true
+    },
+    {
       "permissionName": "bookings.all",
       "displayName": "Bookings: All permissions",
       "description": "All permissions for the Bookings module",
@@ -292,7 +430,10 @@
         "bookings.bookings.create-edit",
         "bookings.bookings.delete",
         "bookings.bookings.override-availability",
-        "bookings.events.manage"
+        "bookings.events.manage",
+        "bookings.bookings.override-limit",
+        "bookings.bookings.activate",
+        "bookings.settings.manage"
       ],
       "visible": true
     }
@@ -324,5 +465,15 @@
         "description": "Okapi gateway URL for cross-module calls"
       }
     ]
-  }
+  },
+  "optional": [
+    {
+      "id": "holdings-storage",
+      "version": "3.0 4.4 5.0 6.0 7.0 8.0"
+    },
+    {
+      "id": "instance-storage",
+      "version": "7.0 8.0 9.0 10.0 11.0"
+    }
+  ]
 }

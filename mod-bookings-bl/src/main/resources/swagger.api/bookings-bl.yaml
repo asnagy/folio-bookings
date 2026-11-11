@@ -244,6 +244,10 @@ components:
         eventId:
           type: string
           format: uuid
+        overrideBookingLimit:
+          type: boolean
+          description: Book even though the patron has reached their booking limit (requires the override-limit permission)
+          default: false
         overrideAvailability:
           type: boolean
           description: >
@@ -340,6 +344,12 @@ components:
           type: string
           format: uuid
         itemId:
+          type: string
+          format: uuid
+        instanceId:
+          type: string
+          format: uuid
+        holdingsRecordId:
           type: string
           format: uuid
         itemBarcode:

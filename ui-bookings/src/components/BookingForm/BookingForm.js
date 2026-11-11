@@ -13,6 +13,7 @@ import {
   Icon,
   KeyValue,
   Loading,
+  ConfirmationModal,
   MessageBanner,
   Pane,
   PaneFooter,
@@ -104,6 +105,8 @@ const BookingForm = (props) => {
   const [events, setEvents] = useState([]);
   const [pickupBy, setPickupBy] = useState(null);
   const canOverride = stripes.hasPerm('ui-bookings.override-availability');
+  const canOverrideLimit = stripes.hasPerm('ui-bookings.override-limit');
+  const [limitPrompt, setLimitPrompt] = useState(null);
   const [patron, setPatron]           = useState(null);
   const [isLoading, setIsLoading]     = useState(isEditing);
   const [submitError, setSubmitError] = useState(null);
@@ -269,7 +272,7 @@ const BookingForm = (props) => {
   // Form submission
   // ------------------------------------------------------------------
 
-  const onSubmit = useCallback(async (values) => {
+  const submitBooking = useCallback(async (values, { overrideLimit = false } = {}) => {
     setSubmitError(null);
     const startDateTime = toIso(values.startDate);
     const endDateTime   = toIso(values.endDate);
@@ -284,6 +287,7 @@ const BookingForm = (props) => {
       pickupByUserId: pickupBy?.id || undefined,
       eventId: values.eventId || undefined,
       overrideAvailability: canOverride ? Boolean(values.overrideAvailability) : undefined,
+      overrideBookingLimit: overrideLimit || undefined,
       notes: values.notes || undefined,
       itemIds: (values.items || []).map(i => i.itemId),
     };
@@ -295,13 +299,22 @@ const BookingForm = (props) => {
       onSubmitSuccess(saved);
     } catch (err) {
       let message = err.message;
+      let code;
       try {
         const body = await err.response?.json();
         message = body?.errors?.[0]?.message || message;
+        code = body?.errors?.[0]?.code;
       } catch (e) { /* keep default message */ }
+      if (err.response?.status === 409 && code === 'BOOKING_LIMIT_EXCEEDED' && canOverrideLimit) {
+        // Offer staff with the permission the choice to book anyway
+        setLimitPrompt({ message, values });
+        return;
+      }
       setSubmitError(message);
     }
-  }, [patron, pickupBy, isEditing, bookingId, onSubmitSuccess, ky, canOverride]);
+  }, [patron, pickupBy, isEditing, bookingId, onSubmitSuccess, ky, canOverride, canOverrideLimit]);
+
+  const onSubmit = useCallback((values) => submitBooking(values), [submitBooking]);
 
   // ------------------------------------------------------------------
   // Validation
@@ -645,6 +658,15 @@ const BookingForm = (props) => {
 
             </AccordionSet>
           </form>
+          <ConfirmationModal
+            id="booking-limit-override-confirmation"
+            open={Boolean(limitPrompt)}
+            heading={<FormattedMessage id="ui-bookings.limit.heading" />}
+            message={limitPrompt ? `${limitPrompt.message}. ${intl.formatMessage({ id: 'ui-bookings.limit.question' })}` : ''}
+            confirmLabel={<FormattedMessage id="ui-bookings.limit.confirm" />}
+            onConfirm={() => { const pending = limitPrompt; setLimitPrompt(null); submitBooking(pending.values, { overrideLimit: true }); }}
+            onCancel={() => setLimitPrompt(null)}
+          />
         </Pane>
       )}
     />

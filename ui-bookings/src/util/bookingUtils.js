@@ -70,3 +70,12 @@ export const buildBookingSearchQuery = ({ query, filters, sort } = {}) => {
   const cql = parts.length > 0 ? parts.join(' AND ') : 'cql.allRecords=1';
   return sort ? `${cql} sortby ${sort}` : cql;
 };
+
+/**
+ * Path of an item's record view in the Inventory app, or null when the booking item
+ * lacks the ids needed to build it (e.g. bookings created before they were recorded).
+ */
+export const inventoryItemPath = (item) => {
+  if (!item || !item.instanceId || !item.holdingsRecordId || !item.itemId) return null;
+  return `/inventory/view/${item.instanceId}/${item.holdingsRecordId}/${item.itemId}`;
+};
