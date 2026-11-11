@@ -20,6 +20,7 @@ import ViewSwitcher from '../ViewSwitcher';
 import EventDetail from './EventDetail';
 import EventForm from './EventForm';
 import { formatDateTimeDisplay } from '../../util/bookingUtils';
+import { csvFilename, downloadCsv, toCsv } from '../../util/csv';
 
 const COLUMNS = ['name', 'description', 'startDate', 'endDate'];
 const WIDTHS = { name: '28%', description: '36%', startDate: '18%', endDate: '18%' };
@@ -80,15 +81,39 @@ const EventsApp = ({ match, history, onSwitchView }) => {
     setSort(prev => (prev.field === meta.name ? { field: meta.name, desc: !prev.desc } : { field: meta.name, desc: false }));
   };
 
-  const actionMenu = canManage ? ({ onToggle }) => (
-    <Button
-      id="clickable-new-event"
-      buttonStyle="dropdownItem"
-      onClick={() => { onToggle(); history.push(`${base}/create`); }}
-    >
-      <Icon icon="plus-sign"><FormattedMessage id="ui-bookings.event.new" /></Icon>
-    </Button>
-  ) : null;
+  // Exports the events currently listed (after search, filters and sort), with the table's columns
+  const exportCsv = () => {
+    const headers = COLUMNS.map(c => intl.formatMessage({ id: `ui-bookings.event.${c}` }));
+    const rows = visible.map(ev => [
+      ev.name,
+      ev.description || '—',
+      formatDateTimeDisplay(ev.startDate),
+      formatDateTimeDisplay(ev.endDate),
+    ]);
+    downloadCsv(csvFilename('events'), toCsv(headers, rows));
+  };
+
+  const actionMenu = ({ onToggle }) => (
+    <>
+      {canManage && (
+        <Button
+          id="clickable-new-event"
+          buttonStyle="dropdownItem"
+          onClick={() => { onToggle(); history.push(`${base}/create`); }}
+        >
+          <Icon icon="plus-sign"><FormattedMessage id="ui-bookings.event.new" /></Icon>
+        </Button>
+      )}
+      <Button
+        id="clickable-export-events"
+        buttonStyle="dropdownItem"
+        disabled={visible.length === 0}
+        onClick={() => { onToggle(); exportCsv(); }}
+      >
+        <Icon icon="arrow-down"><FormattedMessage id="ui-bookings.action.exportCsv" /></Icon>
+      </Button>
+    </>
+  );
 
   const timingOptions = [
     { value: 'upcoming', label: intl.formatMessage({ id: 'ui-bookings.event.filters.upcoming' }) },

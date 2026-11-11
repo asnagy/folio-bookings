@@ -13,6 +13,7 @@ import {
   Button,
   FilterAccordionHeader,
   Icon,
+  MessageBanner,
 } from '@folio/stripes/components';
 import { CheckboxFilter, SearchAndSortQuery } from '@folio/stripes/smart-components';
 import { stripesConnect, useOkapiKy, useStripes } from '@folio/stripes/core';
@@ -24,6 +25,7 @@ import { BOOKINGS_RESOURCE, BOOKING_STATUSES } from '../manifest';
 import BookingRecallBadge from './BookingStatus/BookingRecallBadge';
 import BookingStatusBadge from './BookingStatus/BookingStatusBadge';
 import { formatDateTimeDisplay } from '../util/bookingUtils';
+import { csvFilename, downloadCsv, toCsv } from '../util/csv';
 
 import css from './BookingsApp.css';
 
@@ -35,6 +37,16 @@ const COLUMN_WIDTHS = {
   servicePoint: '14%',
   status:      '12%',
   recall:      '8%',
+};
+
+const COLUMN_LABEL_IDS = {
+  patronName: 'ui-bookings.booking.patron',
+  items: 'ui-bookings.booking.itemCount',
+  servicePoint: 'ui-bookings.booking.pickupServicePoint',
+  startDate: 'ui-bookings.booking.startDate',
+  endDate: 'ui-bookings.booking.endDate',
+  status: 'ui-bookings.booking.status',
+  recall: 'ui-bookings.booking.recall',
 };
 
 const COLUMN_NAMES = ['patronName', 'items', 'servicePoint', 'startDate', 'endDate', 'status', 'recall'];
@@ -101,12 +113,64 @@ const BookingsApp = (props) => {
   // MCL column formatters
   // ------------------------------------------------------------------
 
+  const patronText = (row) => {
+    const p = row.patron;
+    if (!p) return row.userId || '—';
+    return `${p.lastName || ''}, ${p.firstName || ''}`.trim().replace(/^,\s*/, '') || row.userId;
+  };
+  const itemTitles = (row) => (row.items || []).map(i => i.itemTitle || i.itemBarcode).filter(Boolean);
+  // Delivered bookings show the free-text delivery location where pickup bookings show the service point
+  const locationText = (row) => {
+    if (row.delivered) return row.deliveryLocation || '—';
+    return row.pickupServicePointId ? (servicePointNames[row.pickupServicePointId] || row.pickupServicePointId) : '—';
+  };
+  const recallText = (row) => {
+    const items = row.items || [];
+    if (!items.some(i => i.recallStatus === 'REQUIRED' || i.recallStatus === 'TRIGGERED')) return '—';
+    const status = items.every(i => i.recallStatus !== 'REQUIRED') ? 'triggered' : 'required';
+    return intl.formatMessage({ id: `ui-bookings.recallStatus.${status}` });
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+
+  // Exports every booking matching the current search and filters (not just the rows loaded so far)
+  const exportCsv = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const cql = BOOKINGS_RESOURCE.GET.params.query(null, null, { query: resources.query || {} });
+      const PAGE = 100;
+      let all = [];
+      let total = Infinity;
+      while (all.length < total) {
+        const page = await ky.get('bookings/bookings', {
+          searchParams: { query: cql, limit: PAGE, offset: all.length },
+        }).json();
+        total = page.totalRecords ?? 0;
+        if (!page.bookings?.length) break;
+        all = all.concat(page.bookings);
+      }
+      const headers = COLUMN_NAMES.map(c => intl.formatMessage({ id: COLUMN_LABEL_IDS[c] }));
+      const rows = all.map(row => [
+        patronText(row),
+        itemTitles(row).join('; ') || '—',
+        locationText(row),
+        formatDateTimeDisplay(row.startDate),
+        formatDateTimeDisplay(row.endDate),
+        row.status ? intl.formatMessage({ id: `ui-bookings.status.${row.status.toLowerCase()}` }) : '',
+        recallText(row),
+      ]);
+      downloadCsv(csvFilename('bookings'), toCsv(headers, rows));
+    } catch (err) {
+      setExportError(err.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const columnFormatters = {
-    patronName: (row) => {
-      const p = row.patron;
-      if (!p) return row.userId || '—';
-      return `${p.lastName || ''}, ${p.firstName || ''}`.trim().replace(/^,\s*/, '') || row.userId;
-    },
+    patronName: patronText,
     startDate: (row) => formatDateTimeDisplay(row.startDate),
     endDate:   (row) => formatDateTimeDisplay(row.endDate),
     status:    (row) => <BookingStatusBadge status={row.status} />,
@@ -117,7 +181,7 @@ const BookingsApp = (props) => {
       return <BookingRecallBadge status={triggered ? 'TRIGGERED' : 'REQUIRED'} />;
     },
     items:     (row) => {
-      const titles = (row.items || []).map(i => i.itemTitle || i.itemBarcode).filter(Boolean);
+      const titles = itemTitles(row);
       if (!titles.length) return '—';
       return (
         <ul className={css.itemTitles}>
@@ -125,9 +189,7 @@ const BookingsApp = (props) => {
         </ul>
       );
     },
-    servicePoint: (row) => (row.pickupServicePointId
-      ? (servicePointNames[row.pickupServicePointId] || row.pickupServicePointId)
-      : '—'),
+    servicePoint: locationText,
   };
 
   const columnMapping = {
@@ -157,19 +219,31 @@ const BookingsApp = (props) => {
 
     const searchHandlers = getSearchHandlers();
 
-    const actionMenu = canCreate
-      ? ({ onToggle }) => (
+    const actionMenu = ({ onToggle }) => (
+      <>
+        {canCreate && (
+          <Button
+            id="clickable-new-booking"
+            buttonStyle="dropdownItem"
+            onClick={() => { onToggle(); openCreate(); }}
+          >
+            <Icon icon="plus-sign">
+              <FormattedMessage id="ui-bookings.booking.new" />
+            </Icon>
+          </Button>
+        )}
         <Button
-          id="clickable-new-booking"
+          id="clickable-export-bookings"
           buttonStyle="dropdownItem"
-          onClick={() => { onToggle(); openCreate(); }}
+          disabled={isExporting || totalRecords === 0}
+          onClick={() => { onToggle(); exportCsv(); }}
         >
-          <Icon icon="plus-sign">
-            <FormattedMessage id="ui-bookings.booking.new" />
+          <Icon icon="arrow-down">
+            <FormattedMessage id="ui-bookings.action.exportCsv" />
           </Icon>
         </Button>
-      )
-      : null;
+      </>
+    );
 
     const statusOptions = BOOKING_STATUSES.map(value => ({
       value,
@@ -265,6 +339,9 @@ const BookingsApp = (props) => {
         }
         paneTitle={<FormattedMessage id="ui-bookings.meta.title" />}
       >
+        {exportError && (
+          <MessageBanner type="error" onExited={() => setExportError(null)}>{exportError}</MessageBanner>
+        )}
         <MultiColumnList
           id="bookings-list"
           contentData={bookings}

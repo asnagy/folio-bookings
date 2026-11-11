@@ -122,5 +122,6 @@
   "event.filters.upcoming": "Upcoming and current",
   "event.filters.past": "Past",
   "event.delete.heading": "Delete event",
-  "event.delete.message": "Are you sure you want to delete the event \"{name}\"? This cannot be undone. An event that bookings use cannot be deleted."
+  "event.delete.message": "Are you sure you want to delete the event \"{name}\"? This cannot be undone. An event that bookings use cannot be deleted.",
+  "action.exportCsv": "Export to CSV"
 }
