@@ -1,24 +1,18 @@
 const path = require('path');
+const stripesJestConfig = require('@folio/jest-config-stripes');
+
+const config = stripesJestConfig.config || stripesJestConfig;
 
 module.exports = {
-  testEnvironment: 'jsdom',
-  testMatch: ['**/test/**/*.test.{js,jsx}', '**/__tests__/**/*.{js,jsx}'],
-  transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest',
-  },
-  moduleNameMapper: {
-    '\\.(css|less)$': '<rootDir>/test/__mocks__/styleMock.js',
-    '@folio/stripes/components': '<rootDir>/test/__mocks__/stripes-components.js',
-    '@folio/stripes/core':       '<rootDir>/test/__mocks__/stripes-core.js',
-    '@folio/stripes/connect':    '<rootDir>/test/__mocks__/stripes-connect.js',
-    '@folio/stripes/smart-components': '<rootDir>/test/__mocks__/stripes-smart-components.js',
-  },
-  setupFilesAfterFramework: [
-    '@testing-library/jest-dom',
+  ...config,
+  setupFiles: [
+    ...config.setupFiles,
+    path.join(__dirname, './test/jest/jest.setup.js'),
   ],
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
     '!src/index.js',
     '!src/settings/index.js',
+    '!**/node_modules/**',
   ],
 };

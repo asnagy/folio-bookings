@@ -208,3 +208,8 @@ Notes:
 - This gateway does no permission checks on `/bookings/*`. It is for local development only.
 - The BL module reuses your browser session (cookie / token) to call Users, Inventory and Circulation on your hosted FOLIO,
   so recalls and checkouts really happen there. Use test items and a test patron.
+
+## Running the tests
+
+- Backend: `mvn test` in `mod-bookings` and `mod-bookings-bl` (JUnit 5 + Mockito, no database needed).
+- UI: `yarn test` in `ui-bookings`. Uses `@folio/jest-config-stripes`; shared mocks and helpers are in `test/jest`, new tests sit next to the code they cover (`*.test.js`).

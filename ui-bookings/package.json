@@ -1,7 +1,7 @@
 {
   "name": "@folio/bookings",
   "version": "1.0.0",
-  "description": "FOLIO Bookings app — create and manage item booking records",
+  "description": "FOLIO Bookings app \u2014 create and manage item booking records",
   "main": "src/index.js",
   "repository": "folio-org/ui-bookings",
   "publishConfig": {
@@ -158,6 +158,7 @@
   },
   "devDependencies": {
     "@folio/eslint-config-stripes": "^7.0.0",
+    "@folio/jest-config-stripes": "^3.0.0",
     "@folio/stripes-cli": "^3.0.0",
     "@testing-library/jest-dom": "^6.1.4",
     "@testing-library/react": "^14.0.0",
