@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Bookings">
+  <defs>
+    <linearGradient id="bookings-bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9b6df0"/>
+      <stop offset="1" stop-color="#4b2a9c"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#bookings-bg)"/>
+  <!-- calendar body -->
+  <rect x="13" y="17" width="38" height="34" rx="5" fill="#fff"/>
+  <!-- header band -->
+  <path d="M13 22a5 5 0 0 1 5-5h28a5 5 0 0 1 5 5v5H13z" fill="#fff" fill-opacity=".72"/>
+  <path d="M13 27h38" stroke="#6a40c4" stroke-width="1.5" stroke-opacity=".35"/>
+  <!-- binder rings -->
+  <rect x="21" y="12" width="4.5" height="10" rx="2.25" fill="#fff"/>
+  <rect x="38.5" y="12" width="4.5" height="10" rx="2.25" fill="#fff"/>
+  <!-- day grid -->
+  <g fill="#6a40c4" fill-opacity=".35">
+    <circle cx="21" cy="34" r="2"/><circle cx="29" cy="34" r="2"/><circle cx="37" cy="34" r="2"/><circle cx="45" cy="34" r="2"/>
+    <circle cx="21" cy="42" r="2"/><circle cx="45" cy="42" r="2"/>
+  </g>
+  <!-- booked day: check mark -->
+  <circle cx="33" cy="42" r="5.5" fill="#6a40c4"/>
+  <path d="M30.2 42.2l2.2 2.3 3.9-4.4" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
