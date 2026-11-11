@@ -1,0 +1,174 @@
+diff --git a/src/main/java/org/folio/inventory/domain/instances/Instance.java b/src/main/java/org/folio/inventory/domain/instances/Instance.java
+index dff22ec..e6bb4b2 100644
+--- a/src/main/java/org/folio/inventory/domain/instances/Instance.java
++++ b/src/main/java/org/folio/inventory/domain/instances/Instance.java
+@@ -59,6 +59,7 @@ public class Instance {
+   public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
+   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
+   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
++  public static final String SUPPRESS_FROM_BOOKING_KEY = "suppressFromBooking";
+   public static final String DELETED_KEY = "deleted";
+   public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
+   public static final String ADMININSTRATIVE_NOTES_KEY = "administrativeNotes";
+@@ -107,6 +108,7 @@ public class Instance {
+   private Boolean previouslyHeld;
+   private Boolean staffSuppress;
+   private Boolean discoverySuppress;
++  private Boolean suppressFromBooking;
+   private Boolean deleted;
+   private List<String> statisticalCodeIds = new ArrayList<>();
+   private String sourceRecordFormat;
+@@ -179,6 +181,7 @@ public class Instance {
+       .setPreviouslyHeld(instanceJson.getBoolean(PREVIOUSLY_HELD_KEY, false))
+       .setStaffSuppress(instanceJson.getBoolean(STAFF_SUPPRESS_KEY, false))
+       .setDiscoverySuppress(instanceJson.getBoolean(DISCOVERY_SUPPRESS_KEY, false))
++      .setSuppressFromBooking(instanceJson.getBoolean(SUPPRESS_FROM_BOOKING_KEY))
+       .setDeleted(instanceJson.getBoolean(DELETED_KEY, false))
+       .setStatisticalCodeIds(toListOfStrings(instanceJson.getJsonArray(STATISTICAL_CODE_IDS_KEY)))
+       .setSourceRecordFormat(instanceJson.getString(SOURCE_RECORD_FORMAT_KEY))
+@@ -229,6 +232,9 @@ public class Instance {
+     json.put(PREVIOUSLY_HELD_KEY, previouslyHeld);
+     json.put(STAFF_SUPPRESS_KEY, staffSuppress);
+     json.put(DISCOVERY_SUPPRESS_KEY, discoverySuppress);
++    if (suppressFromBooking != null) {
++      json.put(SUPPRESS_FROM_BOOKING_KEY, suppressFromBooking);
++    }
+     json.put(DELETED_KEY, deleted);
+     json.put(STATISTICAL_CODE_IDS_KEY, statisticalCodeIds);
+     if (sourceRecordFormat != null) {
+@@ -285,6 +291,7 @@ public class Instance {
+     putIfNotNull(json, PREVIOUSLY_HELD_KEY, getPreviouslyHeld());
+     putIfNotNull(json, STAFF_SUPPRESS_KEY, getStaffSuppress());
+     putIfNotNull(json, DISCOVERY_SUPPRESS_KEY, getDiscoverySuppress());
++    putIfNotNull(json, SUPPRESS_FROM_BOOKING_KEY, getSuppressFromBooking());
+     putIfNotNull(json, DELETED_KEY, getDeleted());
+     putIfNotNull(json, STATISTICAL_CODE_IDS_KEY, getStatisticalCodeIds());
+     putIfNotNull(json, SOURCE_RECORD_FORMAT_KEY, getSourceRecordFormat());
+@@ -675,6 +682,15 @@ public class Instance {
+     return this;
+   }
+ 
++  public Boolean getSuppressFromBooking() {
++    return suppressFromBooking;
++  }
++
++  public Instance setSuppressFromBooking(Boolean suppressFromBooking) {
++    this.suppressFromBooking = suppressFromBooking;
++    return this;
++  }
++
+   public Boolean getDeleted() {
+     return deleted;
+   }
+@@ -772,6 +788,7 @@ public class Instance {
+       .setPreviouslyHeld(previouslyHeld)
+       .setStaffSuppress(staffSuppress)
+       .setDiscoverySuppress(discoverySuppress)
++      .setSuppressFromBooking(suppressFromBooking)
+       .setStatisticalCodeIds(statisticalCodeIds)
+       .setSourceRecordFormat(sourceRecordFormat)
+       .setStatusId(statusId)
+@@ -807,6 +824,7 @@ public class Instance {
+       .setPreviouslyHeld(previouslyHeld)
+       .setStaffSuppress(staffSuppress)
+       .setDiscoverySuppress(discoverySuppress)
++      .setSuppressFromBooking(suppressFromBooking)
+       .setDeleted(deleted)
+       .setStatisticalCodeIds(statisticalCodeIds)
+       .setSourceRecordFormat(sourceRecordFormat)
+diff --git a/src/main/java/org/folio/inventory/domain/items/Item.java b/src/main/java/org/folio/inventory/domain/items/Item.java
+index 698c414..53421ea 100644
+--- a/src/main/java/org/folio/inventory/domain/items/Item.java
++++ b/src/main/java/org/folio/inventory/domain/items/Item.java
+@@ -16,6 +16,7 @@ public class Item {
+     = "inTransitDestinationServicePointId";
+   public static final String FORMER_IDS_KEY = "formerIds";
+   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
++  public static final String SUPPRESS_FROM_BOOKING_KEY = "suppressFromBooking";
+   public static final String STATUS_KEY = "status";
+   public static final String ACCESSION_NUMBER_KEY = "accessionNumber";
+   public static final String ITEM_IDENTIFIER_KEY = "itemIdentifier";
+@@ -67,6 +68,7 @@ public class Item {
+   private String hrid;
+   private String inTransitDestinationServicePointId;
+   private Boolean discoverySuppress;
++  private Boolean suppressFromBooking;
+   private List<String> formerIds = new ArrayList<>();
+   private String barcode;
+   private String itemLevelCallNumber;
+@@ -177,6 +179,15 @@ public class Item {
+     return this;
+   }
+ 
++  public Boolean getSuppressFromBooking() {
++    return suppressFromBooking;
++  }
++
++  public Item withSuppressFromBooking(Boolean suppressFromBooking) {
++    this.suppressFromBooking = suppressFromBooking;
++    return this;
++  }
++
+   public List<String> getFormerIds() {
+     return formerIds;
+   }
+@@ -549,6 +560,7 @@ public class Item {
+       .withHrid(this.hrid)
+       .withFormerIds(this.formerIds)
+       .withDiscoverySuppress(this.discoverySuppress)
++      .withSuppressFromBooking(this.suppressFromBooking)
+       .withBarcode(this.barcode)
+       .withItemLevelCallNumber(this.itemLevelCallNumber)
+       .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+@@ -589,6 +601,7 @@ public class Item {
+       .withHrid(this.hrid)
+       .withFormerIds(this.formerIds)
+       .withDiscoverySuppress(this.discoverySuppress)
++      .withSuppressFromBooking(this.suppressFromBooking)
+       .withBarcode(this.barcode)
+       .withItemLevelCallNumber(this.itemLevelCallNumber)
+       .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+diff --git a/src/main/java/org/folio/inventory/resources/ItemRepresentation.java b/src/main/java/org/folio/inventory/resources/ItemRepresentation.java
+index 0562d56..e276f3c 100644
+--- a/src/main/java/org/folio/inventory/resources/ItemRepresentation.java
++++ b/src/main/java/org/folio/inventory/resources/ItemRepresentation.java
+@@ -140,6 +140,9 @@ class ItemRepresentation {
+     representation.put("contributorNames", contributorNames);
+     representation.put(Item.FORMER_IDS_KEY, item.getFormerIds());
+     representation.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
++    if (item.getSuppressFromBooking() != null) {
++      representation.put(Item.SUPPRESS_FROM_BOOKING_KEY, item.getSuppressFromBooking());
++    }
+     includeIfPresent(representation, "holdingsRecordId", item.getHoldingId());
+     includeIfPresent(representation, "barcode", item.getBarcode());
+     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
+diff --git a/src/main/java/org/folio/inventory/support/ItemUtil.java b/src/main/java/org/folio/inventory/support/ItemUtil.java
+index 18b5092..b16a19f 100644
+--- a/src/main/java/org/folio/inventory/support/ItemUtil.java
++++ b/src/main/java/org/folio/inventory/support/ItemUtil.java
+@@ -132,6 +132,7 @@ public final class ItemUtil {
+         EFFECTIVE_SHELVING_ORDER_KEY))
+       .withFormerIds(formerIds)
+       .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
++      .withSuppressFromBooking(itemFromServer.getBoolean(Item.SUPPRESS_FROM_BOOKING_KEY))
+       .withBarcode(itemFromServer.getString(BARCODE))
+       .withItemLevelCallNumber(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+       .withItemLevelCallNumberPrefix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+@@ -239,6 +240,7 @@ public final class ItemUtil {
+       .withHrid(itemRequest.getString(Item.HRID_KEY))
+       .withFormerIds(formerIds)
+       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
++      .withSuppressFromBooking(itemRequest.getBoolean(Item.SUPPRESS_FROM_BOOKING_KEY))
+       .withBarcode(itemRequest.getString(BARCODE))
+       .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+       .withEffectiveShelvingOrder(itemRequest.getString(
+@@ -295,6 +297,9 @@ public final class ItemUtil {
+       item.getInTransitDestinationServicePointId());
+     itemJson.put(Item.FORMER_IDS_KEY, item.getFormerIds());
+     itemJson.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
++    if (item.getSuppressFromBooking() != null) {
++      itemJson.put(Item.SUPPRESS_FROM_BOOKING_KEY, item.getSuppressFromBooking());
++    }
+     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
+     itemJson.put(Item.ADMINISTRATIVE_NOTES_KEY, item.getAdministrativeNotes());
+     itemJson.put(NOTES, item.getNotes());

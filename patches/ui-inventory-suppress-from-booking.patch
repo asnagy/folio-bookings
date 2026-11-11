@@ -1,0 +1,229 @@
+diff --git a/package.json b/package.json
+index 98eeaf1..d1ed39d 100644
+--- a/package.json
++++ b/package.json
+@@ -657,6 +657,13 @@
+         ],
+         "visible": true
+       },
++      {
++        "permissionName": "ui-inventory.suppress-from-booking.manage",
++        "displayName": "Inventory: Suppress from booking",
++        "description": "See and change the Suppress from booking flag on instances, holdings and items. Intended for institutions that use the Bookings app.",
++        "subPermissions": [],
++        "visible": true
++      },
+       {
+         "permissionName": "ui-inventory.instance.view",
+         "displayName": "Inventory: View instances, holdings, and items",
+diff --git a/src/Instance/ViewInstance/components/InstanceDetails/InstanceAdministrativeView/InstanceAdministrativeView.js b/src/Instance/ViewInstance/components/InstanceDetails/InstanceAdministrativeView/InstanceAdministrativeView.js
+index 3997c7e..2d4ba8c 100644
+--- a/src/Instance/ViewInstance/components/InstanceDetails/InstanceAdministrativeView/InstanceAdministrativeView.js
++++ b/src/Instance/ViewInstance/components/InstanceDetails/InstanceAdministrativeView/InstanceAdministrativeView.js
+@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
+ import { FormattedMessage } from 'react-intl';
+ import PropTypes from 'prop-types';
+ import queryString from 'query-string';
++import { IfPermission } from '@folio/stripes/core';
+ import {
+   Accordion,
+   Row,
+@@ -110,6 +111,14 @@ const InstanceAdministrativeView = ({
+             <WarningMessage id="ui-inventory.staffSuppressed" />
+           </Col>
+         }
++        <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++          {
++            instance.suppressFromBooking &&
++            <Col xs={3}>
++              <WarningMessage id="ui-inventory.suppressedFromBooking" />
++            </Col>
++          }
++        </IfPermission>
+         {
+           instance.previouslyHeld &&
+           <Col xs={3}>
+diff --git a/src/Item/ViewItem/sections/AdministrativeData/AdministrativeData.js b/src/Item/ViewItem/sections/AdministrativeData/AdministrativeData.js
+index ab1fa0e..1d84a0b 100644
+--- a/src/Item/ViewItem/sections/AdministrativeData/AdministrativeData.js
++++ b/src/Item/ViewItem/sections/AdministrativeData/AdministrativeData.js
+@@ -3,6 +3,7 @@ import {
+   useIntl,
+ } from 'react-intl';
+ import { isEmpty } from 'lodash';
++import { IfPermission } from '@folio/stripes/core';
+ import PropTypes from 'prop-types';
+ 
+ import {
+@@ -66,6 +67,18 @@ const AdministrativeData = ({
+         </Col>
+       </Row>
+       {item.discoverySuppress && <br />}
++      <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++        {item.suppressFromBooking && (
++          <>
++            <Row>
++              <Col xs={12}>
++                <WarningMessage id="ui-inventory.suppressedFromBooking" />
++              </Col>
++            </Row>
++            <br />
++          </>
++        )}
++      </IfPermission>
+       <Row>
+         <Col xs={2}>
+           <KeyValue label={<FormattedMessage id="ui-inventory.itemHrid" />}>
+diff --git a/src/ViewHoldingsRecord.js b/src/ViewHoldingsRecord.js
+index da9fee2..6ed3f11 100644
+--- a/src/ViewHoldingsRecord.js
++++ b/src/ViewHoldingsRecord.js
+@@ -48,6 +48,7 @@ import {
+   AppIcon,
+   IntlConsumer,
+   CalloutContext,
++  IfPermission,
+   stripesConnect,
+   checkIfUserInCentralTenant,
+   checkIfUserInMemberTenant,
+@@ -1109,6 +1110,15 @@ class ViewHoldingsRecord extends React.Component {
+                               {holdingsRecord.discoverySuppress && <WarningMessage id="ui-inventory.discoverySuppressed" />}
+                             </Col>
+                           </Row>
++                          <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++                            {holdingsRecord.suppressFromBooking && (
++                              <Row>
++                                <Col xs={12}>
++                                  <WarningMessage id="ui-inventory.suppressedFromBooking" />
++                                </Col>
++                              </Row>
++                            )}
++                          </IfPermission>
+                           <br />
+                           <Row>
+                             <Col
+diff --git a/src/edit/InstanceForm.js b/src/edit/InstanceForm.js
+index cd67705..a7977c9 100644
+--- a/src/edit/InstanceForm.js
++++ b/src/edit/InstanceForm.js
+@@ -11,6 +11,7 @@ import { withRouter } from 'react-router';
+ 
+ import {
+   AppIcon,
++  IfPermission,
+   IntlConsumer,
+   stripesConnect,
+ } from '@folio/stripes/core';
+@@ -561,6 +562,18 @@ class InstanceForm extends React.Component {
+                                 disabled={this.isFieldBlocked('staffSuppress') || this.state.isInstanceSetForDeletion}
+                               />
+                             </Col>
++                            <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++                              <Col sm={3}>
++                                <Field
++                                  label={<FormattedMessage id="ui-inventory.suppressFromBooking" />}
++                                  name="suppressFromBooking"
++                                  id="input_suppress_from_booking"
++                                  component={Checkbox}
++                                  type="checkbox"
++                                  disabled={this.state.isInstanceSetForDeletion}
++                                />
++                              </Col>
++                            </IfPermission>
+                             <Col sm={3}>
+                               <Field
+                                 label={<FormattedMessage id="ui-inventory.previouslyHeld" />}
+diff --git a/src/edit/holdings/HoldingsForm.js b/src/edit/holdings/HoldingsForm.js
+index 348ecb1..15d3e6e 100644
+--- a/src/edit/holdings/HoldingsForm.js
++++ b/src/edit/holdings/HoldingsForm.js
+@@ -31,6 +31,7 @@ import {
+ import {
+   stripesConnect,
+   AppIcon,
++  IfPermission,
+ } from '@folio/stripes/core';
+ 
+ import { ViewMetaData } from '@folio/stripes/smart-components';
+@@ -425,6 +426,19 @@ class HoldingsForm extends React.Component {
+                         />
+                       </Col>
+                     </Row>
++                    <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++                      <Row>
++                        <Col sm={4}>
++                          <Field
++                            label={<FormattedMessage id="ui-inventory.suppressFromBooking" />}
++                            name="suppressFromBooking"
++                            id="input_suppress_from_booking"
++                            component={Checkbox}
++                            type="checkbox"
++                          />
++                        </Col>
++                      </Row>
++                    </IfPermission>
+                     <Row>
+                       <Col sm={4}>
+                         <Field
+diff --git a/src/edit/items/ItemForm.js b/src/edit/items/ItemForm.js
+index fc3c741..d8cbd8e 100644
+--- a/src/edit/items/ItemForm.js
++++ b/src/edit/items/ItemForm.js
+@@ -40,6 +40,7 @@ import {
+ } from '@folio/stripes/components';
+ import {
+   AppIcon,
++  IfPermission,
+   IntlConsumer,
+ } from '@folio/stripes/core';
+ import stripesFinalForm from '@folio/stripes/final-form';
+@@ -568,6 +569,19 @@ class ItemForm extends React.Component {
+                         />
+                       </Col>
+                     </Row>
++                    <IfPermission perm="ui-inventory.suppress-from-booking.manage">
++                      <Row>
++                        <Col sm={3}>
++                          <Field
++                            label={<FormattedMessage id="ui-inventory.suppressFromBooking" />}
++                            name="suppressFromBooking"
++                            id="input_suppress_from_booking"
++                            component={Checkbox}
++                            type="checkbox"
++                          />
++                        </Col>
++                      </Row>
++                    </IfPermission>
+                     <Row>
+                       <Col sm={2}>
+                         <Field
+diff --git a/translations/ui-inventory/en.json b/translations/ui-inventory/en.json
+index 3c73361..a9d9831 100644
+--- a/translations/ui-inventory/en.json
++++ b/translations/ui-inventory/en.json
+@@ -981,5 +981,8 @@
+   "instanceCustomLinks.error.linkTextUnique": "Error saving data. Link text must be unique.",
+   "instanceCustomLinks.error.linkTextTooLong": "Link text cannot be more than 40 characters.",
+   "instanceCustomLinks.error.linkUnique": "Error saving data. Link must be unique.",
+-  "instanceCustomLinks.error.tooMany": "Error saving data. Only 10 custom links per tenant allowed."
++  "instanceCustomLinks.error.tooMany": "Error saving data. Only 10 custom links per tenant allowed.",
++  "suppressFromBooking": "Suppress from booking",
++  "suppressedFromBooking": "Suppressed from booking",
++  "permission.suppress-from-booking.manage": "Inventory: Suppress from booking"
+ }
+diff --git a/translations/ui-inventory/en_US.json b/translations/ui-inventory/en_US.json
+index 5ffafe7..4702f22 100644
+--- a/translations/ui-inventory/en_US.json
++++ b/translations/ui-inventory/en_US.json
+@@ -940,5 +940,8 @@
+     "item.status.restricted": "Restricted",
+     "item.status.orderClosed": "Order closed",
+     "item.status.unavailable": "Unavailable",
+-    "item.status.unknown": "Unknown"
+-}
+\ No newline at end of file
++    "item.status.unknown": "Unknown",
++  "suppressFromBooking": "Suppress from booking",
++  "suppressedFromBooking": "Suppressed from booking",
++  "permission.suppress-from-booking.manage": "Inventory: Suppress from booking"
++}

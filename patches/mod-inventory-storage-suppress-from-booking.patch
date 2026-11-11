@@ -1,0 +1,61 @@
+diff --git a/ramls/schemas/dereferenced-items/dereferenceditem.json b/ramls/schemas/dereferenced-items/dereferenceditem.json
+index 5879ad0..046b74c 100644
+--- a/ramls/schemas/dereferenced-items/dereferenceditem.json
++++ b/ramls/schemas/dereferenced-items/dereferenceditem.json
+@@ -42,6 +42,10 @@
+       "type": "boolean",
+       "description": "Records the fact that the record should not be displayed in a discovery system"
+     },
++    "suppressFromBooking": {
++      "type": "boolean",
++      "description": "Records the fact that the record should not be offered for booking in the Bookings app"
++    },
+     "accessionNumber": {
+       "type": "string",
+       "description": "Also called inventar number"
+diff --git a/ramls/schemas/holdings-storage/holdingsRecord.json b/ramls/schemas/holdings-storage/holdingsRecord.json
+index 5de102a..243ff1a 100644
+--- a/ramls/schemas/holdings-storage/holdingsRecord.json
++++ b/ramls/schemas/holdings-storage/holdingsRecord.json
+@@ -175,6 +175,10 @@
+       "type": "boolean",
+       "description": "records the fact that the record should not be displayed in a discovery system"
+     },
++    "suppressFromBooking": {
++      "type": "boolean",
++      "description": "Records the fact that the record should not be offered for booking in the Bookings app"
++    },
+     "statisticalCodeIds": {
+       "type": "array",
+       "description": "List of statistical code IDs",
+diff --git a/ramls/schemas/instance-storage/instance.json b/ramls/schemas/instance-storage/instance.json
+index 1e855fd..6894d44 100644
+--- a/ramls/schemas/instance-storage/instance.json
++++ b/ramls/schemas/instance-storage/instance.json
+@@ -399,6 +399,11 @@
+       "description": "Records the fact that the record should not be displayed in a discovery system",
+       "default": false
+     },
++    "suppressFromBooking": {
++      "type": "boolean",
++      "description": "Records the fact that the record should not be offered for booking in the Bookings app",
++      "default": false
++    },
+     "deleted": {
+       "type": "boolean",
+       "description": "Indicates whether the record was marked for deletion",
+diff --git a/ramls/schemas/item-storage/item.json b/ramls/schemas/item-storage/item.json
+index 0f4f041..94aba77 100644
+--- a/ramls/schemas/item-storage/item.json
++++ b/ramls/schemas/item-storage/item.json
+@@ -36,6 +36,10 @@
+       "type": "boolean",
+       "description": "Records the fact that the record should not be displayed in a discovery system"
+     },
++    "suppressFromBooking": {
++      "type": "boolean",
++      "description": "Records the fact that the record should not be offered for booking in the Bookings app"
++    },
+     "displaySummary": {
+       "description": "Display summary about the item",
+       "type": "string"
