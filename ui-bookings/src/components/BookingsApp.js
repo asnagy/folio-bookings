@@ -103,6 +103,11 @@ const BookingsApp = (props) => {
     history.push(`${match.path}/create`);
   }, [history, match.path]);
 
+  // Reload the results list after a booking was created, changed or deleted
+  const refreshList = useCallback(() => {
+    mutator.refreshCount.replace((resources.refreshCount || 0) + 1);
+  }, [mutator, resources.refreshCount]);
+
   const closeThirdPane = useCallback(() => {
     setSelectedBookingId(null);
     setIsCreating(false);
@@ -398,6 +403,7 @@ const BookingsApp = (props) => {
                     mutator={mutator}
                     onClose={closeThirdPane}
                     onSubmitSuccess={(booking) => {
+                      refreshList();
                       closeThirdPane();
                       history.push(`${match.path}/${booking.id}`);
                     }}
@@ -416,6 +422,7 @@ const BookingsApp = (props) => {
                     bookingId={routeProps.match.params.bookingId}
                     onClose={() => history.push(`${match.path}/${routeProps.match.params.bookingId}`)}
                     onSubmitSuccess={(booking) => {
+                      refreshList();
                       history.push(`${match.path}/${booking.id}`);
                     }}
                   />
@@ -435,7 +442,7 @@ const BookingsApp = (props) => {
                     canDelete={canDelete}
                     onClose={closeThirdPane}
                     onEdit={() => history.push(`${match.path}/${routeProps.match.params.bookingId}/edit`)}
-                    onDelete={closeThirdPane}
+                    onDelete={() => { refreshList(); closeThirdPane(); }}
                   />
                 )}
               />
@@ -455,6 +462,7 @@ BookingsApp.manifest = {
     },
   },
   resultCount: { initialValue: 30 },
+  refreshCount: { initialValue: 0 },
   bookings: BOOKINGS_RESOURCE,
 };
 

@@ -25,6 +25,9 @@ export const BOOKINGS_RESOURCE = {
   perRequest: 100,
   GET: {
     params: {
+      // Changing this value changes the request URL, which makes Stripes reload the list
+      // (used after create / edit / delete, which are done outside stripes-connect).
+      _r: (queryParams, pathComponents, resourceValues) => String(resourceValues.refreshCount || 0),
       query: (queryParams, pathComponents, resourceValues) => {
         const { query, filters, sort } = resourceValues.query || {};
         const parts = [];
