@@ -137,7 +137,7 @@ const EventsApp = ({ match, history, onSwitchView }) => {
         id="events-results-pane"
         defaultWidth="fill"
         actionMenu={actionMenu}
-        paneTitle={<FormattedMessage id="ui-bookings.meta.title" />}
+        paneTitle={<FormattedMessage id="ui-bookings.view.events" />}
         paneSub={isLoading
           ? <FormattedMessage id="ui-bookings.loading" />
           : <FormattedMessage id="ui-bookings.event.resultCount" values={{ count: visible.length }} />}
