@@ -72,10 +72,16 @@ export const buildBookingSearchQuery = ({ query, filters, sort } = {}) => {
 };
 
 /**
- * Path of an item's record view in the Inventory app, or null when the booking item
- * lacks the ids needed to build it (e.g. bookings created before they were recorded).
+ * Path in the Inventory app for a booked item: the item's record view when the booking item carries
+ * the instance, holdings and item ids, otherwise (e.g. bookings saved before the ids were recorded)
+ * an Inventory search for its barcode. Null when neither is possible.
  */
 export const inventoryItemPath = (item) => {
-  if (!item || !item.instanceId || !item.holdingsRecordId || !item.itemId) return null;
-  return `/inventory/view/${item.instanceId}/${item.holdingsRecordId}/${item.itemId}`;
+  if (!item) return null;
+  if (item.instanceId && item.holdingsRecordId && item.itemId) {
+    return `/inventory/view/${item.instanceId}/${item.holdingsRecordId}/${item.itemId}`;
+  }
+  return item.itemBarcode
+    ? `/inventory?qindex=items.barcode&query=${encodeURIComponent(item.itemBarcode)}`
+    : null;
 };

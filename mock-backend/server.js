@@ -105,6 +105,8 @@ const buildItems = async (req, itemIds = []) => Promise.all(itemIds.map(async (i
   const status = it?.status?.name || 'Available';
   return {
     itemId,
+    instanceId: it?.instanceId,
+    holdingsRecordId: it?.holdingsRecordId,
     itemBarcode: it?.barcode || '',
     itemTitle: it?.title || it?.instanceTitle || 'Item',
     callNumber: it?.effectiveCallNumberComponents?.callNumber || '',
