@@ -1,0 +1,9 @@
+.switcher {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.switchButton {
+  flex: 1 1 50%;
+  margin: 0;
+}

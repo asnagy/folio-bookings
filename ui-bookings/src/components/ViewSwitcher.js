@@ -1,28 +1,37 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
-import { Button, SegmentedControl } from '@folio/stripes/components';
+import { Button } from '@folio/stripes/components';
+
+import css from './ViewSwitcher.css';
+
+const VIEWS = ['bookings', 'events'];
 
 /**
  * Bookings / Events switch shown at the top of the search pane,
- * the same pattern as the Courses / Reserves switch in the Courses app.
+ * following the Courses / Reserves switch in the Courses app.
+ * Built from plain Buttons so it only depends on components every Stripes version exports.
  */
 const ViewSwitcher = ({ active, onChange }) => (
-  <SegmentedControl
-    activeId={active}
-    onActivate={({ id }) => { if (id !== active) onChange(id); }}
-  >
-    <Button id="bookings" data-test-view-bookings>
-      <FormattedMessage id="ui-bookings.view.bookings" />
-    </Button>
-    <Button id="events" data-test-view-events>
-      <FormattedMessage id="ui-bookings.view.events" />
-    </Button>
-  </SegmentedControl>
+  <div className={css.switcher} role="group">
+    {VIEWS.map(view => (
+      <Button
+        key={view}
+        id={`view-switch-${view}`}
+        buttonStyle={active === view ? 'primary' : 'default'}
+        aria-pressed={active === view}
+        buttonClass={css.switchButton}
+        marginBottom0
+        onClick={() => { if (view !== active) onChange(view); }}
+      >
+        <FormattedMessage id={`ui-bookings.view.${view}`} />
+      </Button>
+    ))}
+  </div>
 );
 
 ViewSwitcher.propTypes = {
-  active: PropTypes.oneOf(['bookings', 'events']).isRequired,
+  active: PropTypes.oneOf(VIEWS).isRequired,
   onChange: PropTypes.func.isRequired,
 };
 
